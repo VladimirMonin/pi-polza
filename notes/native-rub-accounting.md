@@ -130,6 +130,37 @@ This is verified in #21 (tool loop).
 | RUB never in Pi USD cost | mapper zeros + no FX |
 | `/polza-cost` shows RUB | command |
 
+## Live verification
+
+### Single request
+
+`qwen/qwen3.5-9b`, session `polza-accounting-test`. Session JSONL custom entry:
+
+```json
+{"type":"custom","customType":"polza-cost","data":{
+  "modelId":"qwen/qwen3.5-9b","promptTokens":4182,"completionTokens":2,"costRub":0.00704003}}
+```
+
+Pi's own assistant usage in the same session kept `cost.total = 0` (placeholder) with correct tokens.
+
+### Tool loop (ТЗ #21)
+
+`openai/gpt-oss-20b`, `--tools bash`, prompt: run `echo polza-tool-ok` and report the output.
+
+- Agent loop: **1 toolCall → 1 toolResult → continuation**, output contained `polza-tool-ok`.
+- Assistant content included `thinking` blocks — reasoning stream not broken.
+- **Two API requests, two records:**
+
+```
+#1 prompt=2219 out=49   costRub=0.0052189
+#2 prompt=2264 out=160  costRub=0.00648974
+TOTAL requests=2 costRub=0.01170864
+```
+
+- Both `cost_rub` values match catalog × 1.0 (2.11806 / 10.5903 RUB per 1M).
+- Pi's `usage.cost.total` stayed `0` for both; real RUB surfaced only via `/polza-cost`.
+- This is why `VERIFIED_TOOL_SUPPORT["openai/gpt-oss-20b"] = true` (see `verified.ts`).
+
 ## Risks
 
 - Body tap buffers the full SSE response (small; acceptable). If a provider ever streams very large
