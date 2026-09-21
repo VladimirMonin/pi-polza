@@ -82,7 +82,7 @@ For headless or CI use you can supply the key through the environment instead of
 Otherwise, a `.env` file in the project you launch Pi from is read:
 
 ```dotenv
-POLZA_API_KEY=pk_...
+POLZA_API_KEY=<your-key>
 ```
 
 A stored Pi credential always wins; the environment is only consulted when nothing is stored.

@@ -2,7 +2,12 @@
  * Secret audit: prove the live Polza key is not present in the repo tree, in Git history, or in
  * runtime artifacts (session JSONL, OpenRouter cache).
  *
+ * Two layers:
+ *   1. the live key value itself (a literal match), and
+ *   2. generic key-shaped patterns (`POLZA_API_KEY=<long token>`, `sk-polza...`, `Bearer sk-...`).
+ *
  * The key itself is NEVER printed — only the paths that would contain it and a match count.
+ * Documentation placeholders such as `POLZA_API_KEY=<your-key>` do NOT match the generic patterns.
  *
  * Run: npm run audit:secrets
  */
@@ -15,10 +20,22 @@ import { loadDotEnv, PROJECT_ROOT } from "../.pi/extensions/pi-polza/env.ts";
 const SKIP_DIRS = new Set([".git", "node_modules", ".pi/pi-polza-cache"]);
 /** Files that legitimately hold or describe secrets and are never release artifacts. */
 const SKIP_FILES = new Set([".env", "scripts/audit-secrets.ts"]);
+/** Paths excluded from the history scan for the same reason as SKIP_FILES. */
+const HISTORY_EXCLUDES = [".", ":(exclude)scripts/audit-secrets.ts"];
+/** Key-shaped patterns that a placeholder (e.g. `POLZA_API_KEY=<your-key>`) will not match. */
+const GENERIC_PATTERNS = [
+  "POLZA_API_KEY=[A-Za-z0-9_\\-]{20,}",
+  "sk-polza[A-Za-z0-9_\\-]{10,}",
+  "Bearer sk-[A-Za-z0-9_\\-]{20,}",
+];
 
 interface Hit {
   path: string;
   count: number;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function walk(root: string, hits: (path: string, content: Buffer) => void, top: string = root): void {
@@ -43,43 +60,44 @@ function walk(root: string, hits: (path: string, content: Buffer) => void, top: 
   }
 }
 
-function countNeedle(content: Buffer, needle: string): number {
-  if (!needle) return 0;
+function countPatterns(content: Buffer, patterns: string[]): number {
   const hay = content.toString("latin1");
-  const pat = Buffer.from(needle, "utf8").toString("latin1");
-  let count = 0;
-  let index = hay.indexOf(pat);
-  while (index !== -1) {
-    count += 1;
-    index = hay.indexOf(pat, index + pat.length);
+  let total = 0;
+  for (const pattern of patterns) {
+    const re = new RegExp(pattern, "g");
+    for (const match of hay.matchAll(re)) {
+      if (match[0]) total += 1;
+    }
   }
-  return count;
+  return total;
 }
 
-function scanTree(root: string, needles: string[]): Hit[] {
+function scanTree(root: string, patterns: string[]): Hit[] {
   const hits: Hit[] = [];
   walk(root, (path, content) => {
-    let total = 0;
-    for (const needle of needles) total += countNeedle(content, needle);
+    const total = countPatterns(content, patterns);
     if (total > 0) hits.push({ path: relative(root, path).split("\\").join("/"), count: total });
   });
   return hits;
 }
 
-/** Search every blob reachable from any ref with `git grep -F -f <patternfile>`. */
-function scanGitHistory(root: string, needles: string[]): Hit[] {
+/** Search every blob reachable from any ref with `git grep -E -f <patternfile>`. */
+function scanGitHistory(root: string, patterns: string[]): Hit[] {
   const dir = mkdtempSync(join(tmpdir(), "pi-polza-audit-"));
   const patternFile = join(dir, "patterns.txt");
   const hits: Hit[] = [];
   try {
-    writeFileSync(patternFile, needles.join("\n"), "utf8");
+    writeFileSync(patternFile, patterns.join("\n"), "utf8");
     const revs = execFileSync("git", ["rev-list", "--all"], { cwd: root, encoding: "utf8" })
       .split("\n")
       .filter(Boolean);
     for (const rev of revs) {
       let out: string;
       try {
-        out = execFileSync("git", ["grep", "-F", "-l", "-f", patternFile, rev], { cwd: root, encoding: "utf8" });
+        out = execFileSync("git", ["grep", "-E", "-l", "-f", patternFile, rev, "--", ...HISTORY_EXCLUDES], {
+          cwd: root,
+          encoding: "utf8",
+        });
       } catch {
         continue; // exit code 1 = no matches in this revision
       }
@@ -94,31 +112,35 @@ function scanGitHistory(root: string, needles: string[]): Hit[] {
   return hits;
 }
 
+/** `.env`, `.env.bak`, `.env.local` … — never release artifacts. */
+function isEnvFile(path: string): boolean {
+  return /(^|\/)\.env(\.|$)/.test(path);
+}
+
 function main(): void {
   loadDotEnv();
   const key = process.env.POLZA_API_KEY?.trim();
 
-  const genericNeedles = ["POLZA_API_KEY=sk", "POLZA_API_KEY=pk", "sk-polza", "Bearer sk-"];
   console.log(`Live key available for value scan: ${key ? "yes" : "no"}`);
   console.log("(The key value is never printed.)\n");
 
-  const needles = key ? [key, ...genericNeedles] : genericNeedles;
+  const patterns = key ? [escapeRegExp(key), ...GENERIC_PATTERNS] : GENERIC_PATTERNS;
 
-  const repoTree = scanTree(PROJECT_ROOT, needles);
+  const repoTree = scanTree(PROJECT_ROOT, patterns);
 
   let history: Hit[] = [];
   try {
-    history = scanGitHistory(PROJECT_ROOT, needles);
+    history = scanGitHistory(PROJECT_ROOT, patterns);
   } catch (error) {
     console.log(`Git history scan skipped: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   const smoke = "C:/PY/pi-polza-smoke-test";
-  const smokeTree = existsSync(smoke) ? scanTree(smoke, needles).filter((h) => !h.path.endsWith(".env")) : [];
+  const smokeTree = existsSync(smoke) ? scanTree(smoke, patterns).filter((h) => !isEnvFile(h.path)) : [];
 
   const sessionsRoot = "C:/Users/User/.pi/agent/sessions";
   const sessions = existsSync(sessionsRoot)
-    ? scanTree(sessionsRoot, key ? [key] : needles).filter((h) => h.path.includes("pi-polza"))
+    ? scanTree(sessionsRoot, key ? [escapeRegExp(key)] : patterns).filter((h) => h.path.includes("pi-polza"))
     : [];
 
   const report = (label: string, hits: Hit[]): void => {
@@ -128,7 +150,7 @@ function main(): void {
 
   report("Repo working tree", repoTree);
   report("Git history", history);
-  report("Smoke-test workspace (excluding .env)", smokeTree);
+  report("Smoke-test workspace (excluding .env*)", smokeTree);
   report("Polza sessions under ~/.pi (local dev data, not a release artifact)", sessions);
 
   // Release blockers: anything inside the repo, its history, or the shipped workspace.
