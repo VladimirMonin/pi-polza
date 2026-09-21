@@ -17,6 +17,8 @@ import { fetchBalance } from "./balance.ts";
 import { registerPolzaCommands } from "./commands.ts";
 import { hasPolzaApiKey, loadDotEnv } from "./env.ts";
 import { POLZA_API_V1, setRuntimePolzaApiKey } from "./http.ts";
+import { importChildAccounting } from "./integrations/child-import.ts";
+import { createSubagentsBridge } from "./integrations/subagents.ts";
 import { buildPolzaCatalog, POLZA_PROVIDER_ID, toPiModels, type CatalogBuildResult, type OpenRouterMode } from "./provider.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
 import { PolzaStatusController, POLZA_STATUS_KEY, renderPolzaStatus, type PolzaStatusModel } from "./status.ts";
@@ -87,8 +89,7 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
   };
 
   // Rebuild the accumulator from the session on start/resume so accounting survives restarts.
-  pi.on("session_start", (_event, ctx) => {
-    accounting.reset();
+  pi.on("session_start", (_event, ctx) => {    accounting.reset();
     const sessionCtx = ctx as unknown as SessionStartContextLike;
     try {
       accounting.addMany(recordsFromEntries(sessionCtx.sessionManager.getEntries()));
@@ -96,6 +97,28 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
       // Session entries unavailable; keep an empty accumulator.
     }
     syncStatusForContext(ctx);
+  });
+
+  // Background children run in a detached process with their own pi-polza instance, so their
+  // billed responses land in their own session JSONL. Reconcile them once the run completes.
+  const subagentsBridge = createSubagentsBridge(pi, {
+    onChildCompleted: (child) => {
+      if (!child.sessionPath) return;
+      importChildAccounting({
+        sessionPath: child.sessionPath,
+        runId: child.runId,
+        agent: child.agent,
+        accumulator: accounting,
+        appendEntry: (record) => {
+          try {
+            pi.appendEntry("polza-cost", record);
+          } catch {
+            // No active session (e.g. ephemeral mode) — keep the runtime record only.
+          }
+        },
+      });
+      status.requestCompleted(activeCtx?.signal);
+    },
   });
 
   pi.on("model_select", (_event, ctx) => {
@@ -108,6 +131,7 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
   });
 
   pi.on("session_shutdown", () => {
+    subagentsBridge.dispose();
     status.deactivate();
   });
 

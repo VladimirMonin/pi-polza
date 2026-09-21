@@ -320,6 +320,11 @@ export class PolzaCostAccumulator {
     for (const record of records) this.add(record);
   }
 
+  /** True when this identity was already counted (used to avoid re-appending duplicates). */
+  hasEventId(eventId: string): boolean {
+    return this.seenEventIds.has(eventId);
+  }
+
   reset(): void {
     this.records = [];
     this.seenEventIds = new Set();
