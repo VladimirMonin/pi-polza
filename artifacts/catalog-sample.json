@@ -1,0 +1,316 @@
+{
+  "note": "Characteristic Polza catalog entries captured by scripts/probe-catalog.ts",
+  "models": [
+    {
+      "id": "aion-labs/aion-2.0",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "AionLabs: Aion-2.0",
+      "type": "chat",
+      "short_description": "Оптимизирована для иммерсивного сторителлинга и ролевых игр. Поддерживает контекстное окно 131 072 токена для сложных драматических сюжетов.",
+      "icon_provider_slug": "aion-labs",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1772539627,
+      "architecture": {
+        "modality": "text->text",
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Other",
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "aion-labs",
+        "icon_provider_slug": "aion-labs",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 131072,
+        "max_completion_tokens": 32768,
+        "pricing": {
+          "prompt_per_million": "94.13600000",
+          "completion_per_million": "188.27200000",
+          "input_cache_read_per_million": "23.53400000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "reasoning",
+          "include_reasoning",
+          "max_tokens",
+          "temperature",
+          "top_p",
+          "response_format",
+          "tools",
+          "tool_choice"
+        ],
+        "default_parameters": {
+          "temperature": null,
+          "top_p": null,
+          "frequency_penalty": null
+        }
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "amazon/nova-2-lite-v1",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "Amazon: Nova 2 Lite",
+      "type": "chat",
+      "short_description": null,
+      "icon_provider_slug": "amazon",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1769617381,
+      "architecture": {
+        "modality": "text+image+file+video->text",
+        "input_modalities": [
+          "text",
+          "image",
+          "video",
+          "file"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Nova",
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "amazon-bedrock",
+        "icon_provider_slug": "amazon",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 1000000,
+        "max_completion_tokens": 65535,
+        "pricing": {
+          "prompt_per_million": "35.30100000",
+          "completion_per_million": "294.17500000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "reasoning",
+          "include_reasoning",
+          "max_tokens",
+          "temperature",
+          "top_p",
+          "top_k",
+          "stop",
+          "tool_choice",
+          "tools"
+        ],
+        "default_parameters": {
+          "temperature": null,
+          "top_p": null,
+          "frequency_penalty": null
+        }
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "aion-labs/aion-3.0",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "AionLabs: Aion-3.0",
+      "type": "chat",
+      "short_description": null,
+      "icon_provider_slug": "aion-labs",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1783537351,
+      "architecture": {
+        "modality": "text->text",
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Other",
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "aion-labs",
+        "icon_provider_slug": "aion-labs",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 131072,
+        "max_completion_tokens": 32768,
+        "pricing": {
+          "prompt_per_million": "353.01000000",
+          "completion_per_million": "706.02000000",
+          "input_cache_read_per_million": "88.25250000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "reasoning",
+          "include_reasoning",
+          "max_tokens",
+          "temperature",
+          "top_p",
+          "response_format",
+          "tools",
+          "tool_choice"
+        ],
+        "default_parameters": {
+          "temperature": null,
+          "top_p": null,
+          "frequency_penalty": null
+        }
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "aiesa/aiesa-mini",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "Aiesa Mini",
+      "type": "chat",
+      "short_description": "",
+      "icon_provider_slug": "aiesa",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": true,
+      "created": 1782130654,
+      "architecture": {
+        "modality": null,
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": null,
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "aiesa",
+        "icon_provider_slug": "aiesa-mini",
+        "is_fz152_compliant": true,
+        "stores_data_in_russia": true,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": null,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "120.00000000",
+          "completion_per_million": "170.00000000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "max_tokens"
+        ],
+        "default_parameters": null
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "aiesa/aiesa-pro",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "Aiesa Pro",
+      "type": "chat",
+      "short_description": "",
+      "icon_provider_slug": "aiesa",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": true,
+      "created": 1782130788,
+      "architecture": {
+        "modality": null,
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": null,
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "aiesa",
+        "icon_provider_slug": "aiesa-pro",
+        "is_fz152_compliant": true,
+        "stores_data_in_russia": true,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": null,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "350.00000000",
+          "completion_per_million": "600.00000000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "max_tokens"
+        ],
+        "default_parameters": null
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "qwen/qwen3.5-9b",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "Qwen: Qwen3.5-9B",
+      "type": "chat",
+      "short_description": "Обрабатывает мультимодальные данные и сложный код с контекстным окном до 262 тысяч токенов. Гибридная архитектура обеспечивает высокую скорость генерации при выполнении агентных задач.",
+      "icon_provider_slug": "qwen",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1773315877,
+      "architecture": {
+        "modality": null,
+        "input_modalities": [
+          "text",
+          "image",
+          "video"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": null,
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "polza",
+        "icon_provider_slug": "qwen",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": true,
+        "is_hosted_on_polza_infrastructure": true,
+        "is_moderated": false,
+        "context_length": 32768,
+        "max_completion_tokens": 32768,
+        "pricing": {
+          "prompt_per_million": "1.68100000",
+          "completion_per_million": "5.04300000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "max_tokens"
+        ],
+        "default_parameters": null
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    }
+  ]
+}
