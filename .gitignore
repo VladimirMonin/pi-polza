@@ -11,6 +11,9 @@ notes/*.raw.md
 # Local metadata cache (OpenRouter snapshot) — machine-local, not source
 .pi/pi-polza-cache/
 
+# Local background-task artifacts from the Pi harness — runtime state, not source
+.pi/tasks/
+
 # Dependencies / build
 node_modules/
 dist/
