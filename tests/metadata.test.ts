@@ -149,6 +149,17 @@ test("Missing modalities produce dedicated reasons, not unsupported_by_pi", () =
   assert.ok(!resolved.piEligibility.reasons.includes("unsupported_by_pi"));
 });
 
+test("verified tool support is unknown until a real tool loop confirms it", () => {
+  const polza = polzaModel({ id: "vendor/tools", contextLength: 1000, maxCompletionTokens: 100, supportedParameters: ["tools"] });
+  const before = resolveModel(polza, null);
+  assert.equal(before.declaredToolSupport, true);
+  assert.equal(before.verifiedToolSupport, "unknown");
+
+  const after = resolveModel(polza, null, { verifiedToolSupportById: { "vendor/tools": true } });
+  assert.equal(after.declaredToolSupport, true);
+  assert.equal(after.verifiedToolSupport, true);
+});
+
 test("Integration: enrichment recovers limits from OpenRouter snapshots", () => {
   const enrichment = readJson("../artifacts/enrichment-sample.json") as { polzaModels: PolzaCatalogModel[] };
   const orSample = readJson("../artifacts/openrouter-sample.json") as { models: OpenRouterModel[] };

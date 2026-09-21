@@ -11,6 +11,7 @@ import { fetchCatalog } from "./catalog.ts";
 import { fetchOpenRouterModels, indexOpenRouterById } from "./metadata/openrouter.ts";
 import { resolveModels } from "./metadata/resolver.ts";
 import { toProviderModelConfigs } from "./mapper.ts";
+import { VERIFIED_TOOL_SUPPORT } from "./verified.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
 
 export interface CatalogBuildResult {
@@ -47,7 +48,7 @@ export async function buildPolzaCatalog(options: BuildOptions = {}): Promise<Cat
     }
   }
 
-  const resolved = resolveModels(polzaModels, openRouterById);
+  const resolved = resolveModels(polzaModels, openRouterById, { verifiedToolSupportById: VERIFIED_TOOL_SUPPORT });
   const models = toProviderModelConfigs(resolved);
 
   return {

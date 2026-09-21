@@ -28,8 +28,10 @@ export interface ResolveOverrides {
 export interface ResolveOptions {
   /** Surgical verified overrides — highest priority, per field. */
   overrides?: ResolveOverrides;
-  /** Set to `true` only after a real tool loop through Polza succeeded. */
+  /** Set to `true` only after a real tool loop through Polza succeeded (applied to all models). */
   verifiedToolSupport?: boolean | "unknown";
+  /** Per-model-id verified tool support; takes precedence over `verifiedToolSupport`. */
+  verifiedToolSupportById?: Record<string, boolean>;
 }
 
 /**
@@ -139,7 +141,8 @@ export function resolveModel(
     modalities,
     capabilities,
     declaredToolSupport: capabilities.tools.value === true,
-    verifiedToolSupport: options.verifiedToolSupport ?? "unknown",
+    verifiedToolSupport:
+      options.verifiedToolSupportById?.[polza.id] ?? options.verifiedToolSupport ?? "unknown",
     pricing: {
       polzaRUB: polza.pricing,
       openRouterReference: openRouter?.referencePricing ?? null,
