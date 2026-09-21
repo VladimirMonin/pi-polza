@@ -4,6 +4,7 @@
  * Values are shown with their provenance. Unknown values read as `unknown`, never `0`.
  */
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import { summarizeRecords, type PolzaUsageRecord } from "./accounting.ts";
 import { fetchBalance, formatRub } from "./balance.ts";
 import { extractInternalCapabilities } from "./mapper.ts";
 import type { Provenanced } from "./metadata/provenance.ts";
@@ -13,6 +14,8 @@ export interface CommandDeps {
   /** Current internal registry (including ineligible models). */
   getRegistry: () => ResolvedModel[];
   getLastBuildInfo: () => { polzaCount: number; eligible: number; openRouterError: string | null; fetchedAt: number } | null;
+  /** Native RUB usage records captured for the current session. */
+  getUsageRecords: () => readonly PolzaUsageRecord[];
 }
 
 function show(value: unknown): string {
@@ -83,6 +86,43 @@ function modelInfoLines(model: ResolvedModel): string[] {
   return lines;
 }
 
+function rubOrUnknown(value: number | null): string {
+  return value === null ? "unknown" : formatRub(value);
+}
+
+function costLines(records: readonly PolzaUsageRecord[]): string[] {
+  const summary = summarizeRecords(records);
+  if (summary.requests === 0) return ["No Polza usage recorded in this session yet."];
+
+  const lines = [
+    "Current session (native RUB)",
+    "",
+    `Requests:          ${summary.requests}`,
+    `Input tokens:      ${summary.promptTokens.toLocaleString("en-US")}`,
+    `Cached:            ${summary.cachedTokens.toLocaleString("en-US")}`,
+    `Cache write:       ${summary.cacheWriteTokens.toLocaleString("en-US")}`,
+    `Output tokens:     ${summary.completionTokens.toLocaleString("en-US")}`,
+    `Reasoning tokens:  ${summary.reasoningTokens.toLocaleString("en-US")}`,
+    "",
+    `Actual cost: ${rubOrUnknown(summary.actualCostRub)}  (from usage.cost_rub)`,
+  ];
+
+  if (summary.models.length > 0) {
+    lines.push("", "Models");
+    const width = Math.max(20, ...summary.models.map((m) => m.modelId.length));
+    for (const model of summary.models) {
+      lines.push(`  ${model.modelId.padEnd(width)}  ${rubOrUnknown(model.costRub)}  (${model.requests} req)`);
+    }
+    lines.push(`  ${"Total".padEnd(width)}  ${rubOrUnknown(summary.actualCostRub)}`);
+  }
+
+  const estimated = records.some((r) => r.costRub === null);
+  if (estimated) {
+    lines.push("", "Note: some requests reported no cost_rub — their cost is unknown, not estimated.");
+  }
+  return lines;
+}
+
 export function registerPolzaCommands(pi: ExtensionAPI, deps: CommandDeps): void {
   pi.registerCommand("polza-model-info", {
     description: "Show capabilities, limits, pricing and metadata sources for the current Polza model",
@@ -102,6 +142,13 @@ export function registerPolzaCommands(pi: ExtensionAPI, deps: CommandDeps): void
         return;
       }
       ctx.ui.notify(modelInfoLines(resolved).join("\n"), "info");
+    },
+  });
+
+  pi.registerCommand("polza-cost", {
+    description: "Show actual Polza cost for the current session in native RUB",
+    handler: async (_args: string, ctx: ExtensionCommandContext) => {
+      ctx.ui.notify(costLines(deps.getUsageRecords()).join("\n"), "info");
     },
   });
 

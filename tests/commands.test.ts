@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { registerPolzaCommands } from "../.pi/extensions/pi-polza/commands.ts";
+import { recordFromUsage, type PolzaUsageRecord } from "../.pi/extensions/pi-polza/accounting.ts";
 import { resolveModel } from "../.pi/extensions/pi-polza/metadata/resolver.ts";
 import type { ResolvedModel } from "../.pi/extensions/pi-polza/metadata/types.ts";
 import { polzaModel } from "./fixtures.ts";
@@ -16,11 +17,12 @@ function collectCommands(): { handlers: Map<string, Handler>; notify: (name: str
   const fakePi = {
     registerCommand: (name: string, options: { handler: Handler }) => handlers.set(name, options.handler),
   } as unknown as Parameters<typeof registerPolzaCommands>[0];
-  registerPolzaCommands(fakePi, { getRegistry: () => registry, getLastBuildInfo: () => null });
+  registerPolzaCommands(fakePi, { getRegistry: () => registry, getLastBuildInfo: () => null, getUsageRecords: () => usageRecords });
   return { handlers, notify: () => {} };
 }
 
 let registry: ResolvedModel[] = [];
+let usageRecords: PolzaUsageRecord[] = [];
 
 function makeCtx(model: { provider: string; id: string } | undefined): { notifications: Array<{ message: string; type: string }>; ctx: unknown } {
   const notifications: Array<{ message: string; type: string }> = [];
@@ -39,6 +41,7 @@ const originalKey = process.env.POLZA_API_KEY;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  usageRecords = [];
   if (originalKey === undefined) delete process.env.POLZA_API_KEY;
   else process.env.POLZA_API_KEY = originalKey;
 });
@@ -97,6 +100,47 @@ test("/polza-model-info warns for a non-Polza model", async () => {
   await handler("", ctx);
   assert.equal(notifications[0]!.type, "warning");
   assert.match(notifications[0]!.message, /not a Polza model/);
+});
+
+test("/polza-cost reports nothing for an empty session", async () => {
+  registry = [];
+  usageRecords = [];
+  const { handlers } = collectCommands();
+  const handler = handlers.get("polza-cost")!;
+  const { notifications, ctx } = makeCtx(undefined);
+  await handler("", ctx);
+  assert.match(notifications[0]!.message, /No Polza usage recorded/);
+});
+
+test("/polza-cost sums actual RUB and per-model costs", async () => {
+  registry = [];
+  usageRecords = [
+    recordFromUsage("qwen/qwen3.5-9b", { prompt_tokens: 19, completion_tokens: 2, cost_rub: 0.00004203 }, 1),
+    recordFromUsage("openai/gpt-5-nano", { prompt_tokens: 4026, completion_tokens: 0, cost_rub: 0.02368697 }, 2),
+    recordFromUsage("openai/gpt-5-nano", { prompt_tokens: 4026, completion_tokens: 0, cost_rub: 0.00267582 }, 3),
+  ];
+  const { handlers } = collectCommands();
+  const handler = handlers.get("polza-cost")!;
+  const { notifications, ctx } = makeCtx(undefined);
+  await handler("", ctx);
+
+  const text = notifications[0]!.message;
+  assert.match(text, /Requests:\s+3/);
+  assert.match(text, /Input tokens:\s+8,071/);
+  assert.match(text, /qwen\/qwen3\.5-9b/);
+  assert.match(text, /openai\/gpt-5-nano/);
+  assert.match(text, /Total/);
+});
+
+test("/polza-cost marks unknown cost when cost_rub is absent", async () => {
+  registry = [];
+  usageRecords = [recordFromUsage("qwen/qwen3.5-9b", { prompt_tokens: 10, completion_tokens: 1 }, 1)];
+  const { handlers } = collectCommands();
+  const handler = handlers.get("polza-cost")!;
+  const { notifications, ctx } = makeCtx(undefined);
+  await handler("", ctx);
+  assert.match(notifications[0]!.message, /Actual cost: unknown/);
+  assert.match(notifications[0]!.message, /cost is unknown, not estimated/);
 });
 
 test("/polza-balance prints native RUB fields and does not call it session cost", async () => {

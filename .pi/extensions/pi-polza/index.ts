@@ -5,18 +5,25 @@
  * from the live Polza catalog, enriched with OpenRouter technical metadata for missing fields.
  *
  * Native RUB accounting: catalog RUB prices are reference only; actual billed cost is
- * `usage.cost_rub` (see usage.ts / pricing.ts). Pi's USD cost stays 0 on purpose.
+ * `usage.cost_rub`, tapped from each raw response by `stream.ts` and persisted as custom session
+ * entries. Pi's USD cost stays 0 on purpose (compatibility placeholder).
  */
 import type { ExtensionAPI, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+import { PolzaCostAccumulator, recordsFromEntries } from "./accounting.ts";
 import { registerPolzaCommands } from "./commands.ts";
 import { hasPolzaApiKey, loadDotEnv } from "./env.ts";
 import { POLZA_API_V1 } from "./http.ts";
 import { buildPolzaCatalog, type CatalogBuildResult } from "./provider.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
+import { createPolzaStreamSimple } from "./stream.ts";
 
 interface RefreshModelsContextLike {
   allowNetwork: boolean;
   signal: AbortSignal;
+}
+
+interface SessionStartContextLike {
+  sessionManager: { getEntries(): Iterable<unknown> };
 }
 
 export default async function piPolza(pi: ExtensionAPI): Promise<void> {
@@ -25,6 +32,28 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
 
   let registry: ResolvedModel[] = [];
   let lastBuild: CatalogBuildResult | null = null;
+  const accounting = new PolzaCostAccumulator();
+
+  // Capture native RUB per request: in-memory accumulator + custom session entry.
+  const onUsageRecord = (record: Parameters<PolzaCostAccumulator["add"]>[0]): void => {
+    accounting.add(record);
+    try {
+      pi.appendEntry("polza-cost", record);
+    } catch {
+      // No active session (e.g. ephemeral mode) — keep the runtime record only.
+    }
+  };
+
+  // Rebuild the accumulator from the session on start/resume so accounting survives restarts.
+  pi.on("session_start", (_event, ctx) => {
+    accounting.reset();
+    const sessionCtx = ctx as unknown as SessionStartContextLike;
+    try {
+      accounting.addMany(recordsFromEntries(sessionCtx.sessionManager.getEntries()));
+    } catch {
+      // Session entries unavailable; keep an empty accumulator.
+    }
+  });
 
   const refreshModels = async (context: RefreshModelsContextLike): Promise<ProviderModelConfig[]> => {
     if (!context.allowNetwork) {
@@ -56,6 +85,8 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
     api: "openai-completions",
     models: initialModels,
     refreshModels,
+    // Tap raw responses for usage.cost_rub without touching Pi's transport.
+    streamSimple: createPolzaStreamSimple(onUsageRecord),
   });
 
   registerPolzaCommands(pi, {
@@ -69,5 +100,6 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
             fetchedAt: lastBuild.fetchedAt,
           }
         : null,
+    getUsageRecords: () => accounting.all,
   });
 }
