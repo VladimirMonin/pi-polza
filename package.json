@@ -42,6 +42,7 @@
     "probe:reasoning": "node scripts/probe-reasoning.ts",
     "probe:conflicts": "node scripts/probe-conflicts.ts",
     "probe:orphans": "node scripts/probe-orphans.ts",
-    "test:live": "node --test \"tests-live/**/*.test.ts\""
+    "test:live": "node --test \"tests-live/**/*.test.ts\"",
+    "audit:secrets": "node scripts/audit-secrets.ts"
   }
 }
