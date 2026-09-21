@@ -157,10 +157,13 @@ export function modelInfoPanel(model: ResolvedModel): Panel {
           role: verification.levelControlVerified === true ? "success" : "unknown",
         },
         {
-          label: "Observed",
-          value: reasoningObserved ? "yes" : "no",
-          role: reasoningObserved ? "value" : "unknown",
-          hint: verification.source,
+          label: "Observed reasoning",
+          value: reasoningObserved
+            ? verification.reasoningPayloadObserved
+              ? "usage payload"
+              : "inline content"
+            : "none",
+          role: reasoningObserved ? "success" : "unknown",
         },
         ...describeReasoning(verification).map((line) => ({ label: "", value: line, role: "dim" as ValueRole })),
       ],

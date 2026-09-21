@@ -81,6 +81,21 @@ test("costPanel highlights actual cost as accent and keeps unknown explicit", ()
   assert.match(plain, /cost is unknown, not estimated/);
 });
 
+test("modelInfoPanel describes reasoning observation in human terms", () => {
+  const plain = (m: ReturnType<typeof resolveModel>): string =>
+    renderPanel({ fg: (_c, t) => t, bold: (t) => t }, modelInfoPanel(m)).join("\n");
+
+  // A model with a verified live reasoning payload must not say "none".
+  const verified = resolveModel(polzaModel({ id: "openai/gpt-oss-20b" }), null);
+  const verifiedText = plain(verified);
+  assert.match(verifiedText, /Observed reasoning\s+(usage payload|inline content)/);
+  assert.doesNotMatch(verifiedText, /Observed\s+(yes|no)\b/);
+
+  // A model with no runtime evidence reads as a plain, honest "none" (never "no none").
+  const unverified = resolveModel(polzaModel({ id: "vendor/no-evidence" }), null);
+  assert.match(plain(unverified), /Observed reasoning\s+none/);
+});
+
 test("balancePanel makes the available balance the accent headline", () => {
   const { theme, calls } = recordingTheme();
   renderPanel(
