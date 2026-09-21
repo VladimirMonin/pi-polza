@@ -19,6 +19,7 @@
     "probe:ttft": "node scripts/probe-ttft.ts",
     "probe:persistence": "node scripts/verify-persistence.ts",
     "probe:startup": "node scripts/probe-startup.ts",
-    "probe:reasoning": "node scripts/probe-reasoning.ts"
+    "probe:reasoning": "node scripts/probe-reasoning.ts",
+    "probe:conflicts": "node scripts/probe-conflicts.ts"
   }
 }
