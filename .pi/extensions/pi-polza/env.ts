@@ -36,20 +36,24 @@ export const WORKSPACE_ROOT = process.cwd();
 const ENV_FILE_OVERRIDE = process.env.PI_POLZA_ENV_FILE?.trim();
 
 /**
- * Resolve which `.env` to read, in order:
+ * Decide which `.env` to read. Pure so it can be tested with an explicit cwd.
+ *
  *   1. `PI_POLZA_ENV_FILE` — explicit override, wins over everything
  *   2. `<cwd>/.env`        — the project Pi was launched from (installed-package UX)
- *   3. `<source repo>/.env`— development convenience when running from the checkout
- * Falls back to the cwd path even when no file exists, so error messages name a
- * path the user can actually create.
+ *
+ * There is deliberately NO fallback to the source checkout's `.env`. When Pi is launched from the
+ * checkout, `cwd` *is* the checkout, so `.env` is still found; from any other project the installed
+ * package must never reach back and pick up the developer's key. Returns the cwd path even when no
+ * file exists, so error messages name a path the user can create.
  */
+export function resolveDotEnvPath(input: { cwd: string; override?: string }): string {
+  const override = input.override?.trim();
+  if (override) return resolve(override);
+  return resolve(input.cwd, ".env");
+}
+
 function defaultDotEnvPath(): string {
-  if (ENV_FILE_OVERRIDE) return resolve(ENV_FILE_OVERRIDE);
-  const fromWorkspace = resolve(WORKSPACE_ROOT, ".env");
-  if (existsSync(fromWorkspace)) return fromWorkspace;
-  const fromRepo = resolve(PROJECT_ROOT, ".env");
-  if (existsSync(fromRepo)) return fromRepo;
-  return fromWorkspace;
+  return resolveDotEnvPath({ cwd: WORKSPACE_ROOT, override: ENV_FILE_OVERRIDE });
 }
 
 const DOTENV_PATH = defaultDotEnvPath();
