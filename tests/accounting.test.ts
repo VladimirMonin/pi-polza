@@ -84,3 +84,27 @@ test("recordsFromEntries ignores malformed data", () => {
   const records = recordsFromEntries([{ type: "custom", customType: "polza-cost", data: { nope: true } }]);
   assert.equal(records.length, 0);
 });
+
+test("rebuild from entries is idempotent — reopen never doubles accounting", () => {
+  const entries = [
+    { type: "custom", customType: "polza-cost", data: { modelId: "a/b", promptTokens: 10, completionTokens: 1, cachedTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0, costRub: 0.02, timestamp: 1 } },
+    { type: "custom", customType: "polza-cost", data: { modelId: "a/b", promptTokens: 20, completionTokens: 2, cachedTokens: 5, cacheWriteTokens: 0, reasoningTokens: 0, costRub: 0.03, timestamp: 2 } },
+  ];
+  const accumulator = new PolzaCostAccumulator();
+  accumulator.addMany(recordsFromEntries(entries));
+  const first = accumulator.summary();
+
+  // simulate session_start on resume: reset then rebuild from the same entries
+  accumulator.reset();
+  accumulator.addMany(recordsFromEntries(entries));
+  const second = accumulator.summary();
+
+  assert.equal(first.requests, 2);
+  assert.deepEqual(second, first);
+  assert.ok(Math.abs(second.actualCostRub! - 0.05) < 1e-12);
+});
+
+test("a response without usage yields no record (dedup safety at the source)", () => {
+  assert.equal(extractUsageFromBody('data: {"choices":[]}\n\ndata: [DONE]\n'), null);
+  assert.equal(extractUsageFromBody("data: [DONE]\n"), null);
+});
