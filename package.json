@@ -28,6 +28,8 @@
     ".pi/extensions/pi-polza",
     "docs/images",
     "README.md",
+    "README.en.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "pi": {
