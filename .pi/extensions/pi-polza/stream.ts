@@ -2,15 +2,17 @@
  * Pi-specific stream wrapper for native RUB accounting.
  *
  * It does NOT reimplement the OpenAI-compatible transport. It delegates to the bundled
- * `openAICompletionsApi().streamSimple` and injects a `fetch` that clones each response and reads
- * the raw body in parallel to capture `usage.cost_rub` (which Pi's normalizer drops).
+ * `openAICompletionsApi().streamSimple` and injects a `fetch` that wraps each response in a
+ * transparent pass-through `TransformStream` (see `tap.ts`) to observe `usage.cost_rub`
+ * incrementally — Pi still reads the original stream, unmodified and unbuffered.
  *
  * This module imports `@earendil-works/pi-ai/compat`, which is only resolvable inside Pi (virtual
  * module), so it is intentionally not unit-tested under plain Node.
  */
 import { openAICompletionsApi } from "@earendil-works/pi-ai/compat";
 import type { AssistantMessageEventStream, Model, SimpleStreamOptions, TranscriptContext } from "@earendil-works/pi-ai/compat";
-import { extractUsageFromBody, recordFromUsage, type PolzaUsageRecord } from "./accounting.ts";
+import { recordFromUsage, type PolzaUsageRecord } from "./accounting.ts";
+import { tapResponseForUsage } from "./tap.ts";
 
 export type PolzaUsageSink = (record: PolzaUsageRecord) => void;
 
@@ -28,27 +30,21 @@ export function createPolzaStreamSimple(onRecord: PolzaUsageSink) {
 
     const tappingFetch: typeof globalThis.fetch = async (input, init) => {
       const response = await baseFetch(input, init);
-      if (response.ok) {
-        try {
-          // Clone before Pi consumes the body so nothing is lost.
-          const clone = response.clone();
-          void clone
-            .text()
-            .then((body) => {
-              const usage = extractUsageFromBody(body);
-              if (!usage) return;
-              try {
-                onRecord(recordFromUsage(model.id, usage));
-              } catch {
-                // Accounting must never break the provider stream.
-              }
-            })
-            .catch(() => {});
-        } catch {
-          // If cloning is unsupported, streaming continues untapped rather than failing.
-        }
+      if (!response.ok) return response;
+      try {
+        return tapResponseForUsage(response, {
+          onUsage: (usage) => {
+            try {
+              onRecord(recordFromUsage(model.id, usage));
+            } catch {
+              // Accounting must never break the provider stream.
+            }
+          },
+        });
+      } catch {
+        // If wrapping is unsupported, streaming continues untapped rather than failing.
+        return response;
       }
-      return response;
     };
 
     return api.streamSimple(model, context, { ...options, fetch: tappingFetch });

@@ -50,25 +50,64 @@ function isUsageLike(value: unknown): value is RawUsageLike {
 }
 
 /**
+ * Incremental SSE usage scanner.
+ *
+ * Feed decoded text as it arrives; it keeps only the trailing partial line, parses complete
+ * `data:` lines, and remembers the LAST chunk carrying `usage` (the final chunk before `[DONE]`).
+ * Memory stays bounded by one SSE line, so the full response body is never retained.
+ */
+export class SseUsageScanner {
+  private carry = "";
+  private last: RawUsageLike | null = null;
+
+  push(text: string): void {
+    if (!text) return;
+    this.carry += text;
+    let index = this.carry.indexOf("\n");
+    while (index !== -1) {
+      this.consume(this.carry.slice(0, index));
+      this.carry = this.carry.slice(index + 1);
+      index = this.carry.indexOf("\n");
+    }
+  }
+
+  /** Flush the trailing partial line and return the last usage seen (or null). */
+  flush(): RawUsageLike | null {
+    if (this.carry) {
+      this.consume(this.carry);
+      this.carry = "";
+    }
+    return this.last;
+  }
+
+  get usage(): RawUsageLike | null {
+    return this.last;
+  }
+
+  private consume(rawLine: string): void {
+    const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
+    const trimmed = line.trimStart();
+    if (!trimmed.startsWith("data:")) return;
+    const payload = trimmed.slice(5).trim();
+    if (!payload || payload === "[DONE]") return;
+    try {
+      const parsed = JSON.parse(payload) as { usage?: unknown };
+      if (isUsageLike(parsed.usage)) this.last = parsed.usage;
+    } catch {
+      // ignore non-JSON keep-alive lines
+    }
+  }
+}
+
+/**
  * Extract the authoritative usage from a streaming SSE body.
  * Scans all `data:` JSON chunks and keeps the LAST one that carries `usage` (the final chunk
  * before `[DONE]`), ignoring the `[DONE]` sentinel.
  */
 export function extractUsageFromSse(body: string): RawUsageLike | null {
-  let found: RawUsageLike | null = null;
-  for (const rawLine of body.split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line.startsWith("data:")) continue;
-    const payload = line.slice(5).trim();
-    if (!payload || payload === "[DONE]") continue;
-    try {
-      const parsed = JSON.parse(payload) as { usage?: unknown };
-      if (isUsageLike(parsed.usage)) found = parsed.usage;
-    } catch {
-      // ignore non-JSON keep-alive lines
-    }
-  }
-  return found;
+  const scanner = new SseUsageScanner();
+  scanner.push(body);
+  return scanner.flush();
 }
 
 /** Extract usage from a non-streaming JSON body. */
