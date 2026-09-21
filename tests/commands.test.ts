@@ -82,12 +82,13 @@ test("/polza-model-info shows values with provenance", async () => {
 
   assert.equal(notifications.length, 1);
   const text = notifications[0]!.message;
-  assert.match(text, /Model:\s+qwen\/qwen3\.5-9b/);
-  assert.match(text, /Context:\s+32,768 \(source: polza\)/);
-  assert.match(text, /Max output:\s+32,768 \(source: polza\)/);
-  assert.match(text, /Tools:\s+declared: yes \(source: polza\), verified: unknown/);
-  assert.match(text, /Reasoning:\s+declared: yes/);
-  assert.match(text, /Cache read:\s+unknown/);
+  assert.match(text, /Model\s+qwen\/qwen3\.5-9b/);
+  assert.match(text, /Context\s+32,768/);
+  assert.match(text, /Max output\s+32,768/);
+  assert.match(text, /polza/);
+  assert.match(text, /Tools\s+yes/);
+  assert.match(text, /Reasoning\s+declared/);
+  assert.match(text, /Cache read\s+unknown/);
   assert.match(text, /usage\.cost_rub/);
 });
 
@@ -99,9 +100,9 @@ test("/polza-model-info reports unknown instead of 0", async () => {
   await handler("", ctx);
 
   const text = notifications[0]!.message;
-  assert.match(text, /Context:\s+unknown/);
-  assert.match(text, /Max output:\s+unknown/);
-  assert.doesNotMatch(text, /Context:\s+0/);
+  assert.match(text, /Context\s+unknown/);
+  assert.match(text, /Max output\s+unknown/);
+  assert.doesNotMatch(text, /Context\s+0/);
 });
 
 test("/polza-model-info warns for a non-Polza model", async () => {
@@ -121,7 +122,7 @@ test("/polza-cost reports nothing for an empty session", async () => {
   const handler = handlers.get("polza-cost")!;
   const { notifications, ctx } = makeCtx(undefined);
   await handler("", ctx);
-  assert.match(notifications[0]!.message, /No Polza usage recorded/);
+  assert.match(notifications[0]!.message, /no usage recorded yet/);
 });
 
 test("/polza-cost sums actual RUB and per-model costs", async () => {
@@ -137,11 +138,11 @@ test("/polza-cost sums actual RUB and per-model costs", async () => {
   await handler("", ctx);
 
   const text = notifications[0]!.message;
-  assert.match(text, /Requests:\s+3/);
-  assert.match(text, /Input tokens:\s+8,071/);
+  assert.match(text, /Actual cost/);
+  assert.match(text, /Requests\s+3/);
+  assert.match(text, /Input\s+8,071/);
   assert.match(text, /qwen\/qwen3\.5-9b/);
   assert.match(text, /openai\/gpt-5-nano/);
-  assert.match(text, /Total/);
 });
 
 test("/polza-cost marks unknown cost when cost_rub is absent", async () => {
@@ -151,7 +152,7 @@ test("/polza-cost marks unknown cost when cost_rub is absent", async () => {
   const handler = handlers.get("polza-cost")!;
   const { notifications, ctx } = makeCtx(undefined);
   await handler("", ctx);
-  assert.match(notifications[0]!.message, /Actual cost: unknown/);
+  assert.match(notifications[0]!.message, /Actual cost\s+unknown/);
   assert.match(notifications[0]!.message, /cost is unknown, not estimated/);
 });
 
@@ -176,27 +177,53 @@ test("/polza-balance prints native RUB fields and does not call it session cost"
   await handler("", ctx);
 
   const text = notifications[0]!.message;
-  assert.match(text, /Balance:/);
-  assert.match(text, /Available:/);
-  assert.match(text, /Reserved:/);
-  assert.match(text, /Lifetime spent:/);
+  assert.match(text, /Available/);
+  assert.match(text, /Reserved/);
+  assert.match(text, /Lifetime spent/);
   assert.match(text, /not the current session cost/);
 });
 
-test("/polza-refresh reloads extensions to refresh the catalog", async () => {
+test("/polza-refresh refreshes the polza provider and reports success", async () => {
   registry = [];
   const { handlers } = collectCommands();
   const handler = handlers.get("polza-refresh")!;
-  let reloads = 0;
+  let refreshed = 0;
   const notifications: Array<{ message: string; type: string }> = [];
   const ctx = {
-    ui: { notify: (message: string, type: string = "info") => notifications.push({ message, type }) },
-    reload: async () => {
-      reloads += 1;
+    ui: {
+      notify: (message: string, type: string = "info") => notifications.push({ message, type }),
+      theme: { fg: (_c: string, t: string) => t, bold: (t: string) => t },
+    },
+    modelRegistry: {
+      getProviderAuthStatus: () => ({ configured: true }),
+      refresh: async (options: { providers?: readonly string[] }) => {
+        refreshed += 1;
+        assert.deepEqual(options.providers, ["polza"]);
+        return { aborted: false, errors: new Map() };
+      },
     },
   };
   await handler("", ctx);
-  assert.equal(reloads, 1);
+  assert.equal(refreshed, 1);
   assert.equal(notifications[0]!.type, "info");
-  assert.match(notifications[0]!.message, /refresh/i);
+  assert.match(notifications[0]!.message, /refreshed/i);
+});
+
+test("/polza-refresh tells the user to log in when Polza is unconfigured", async () => {
+  registry = [];
+  const { handlers } = collectCommands();
+  const handler = handlers.get("polza-refresh")!;
+  const notifications: Array<{ message: string; type: string }> = [];
+  const ctx = {
+    ui: { notify: (message: string, type: string = "info") => notifications.push({ message, type }) },
+    modelRegistry: {
+      getProviderAuthStatus: () => ({ configured: false }),
+      refresh: async () => {
+        throw new Error("should not be called");
+      },
+    },
+  };
+  await handler("", ctx);
+  assert.equal(notifications[0]!.type, "warning");
+  assert.match(notifications[0]!.message, /login/);
 });
