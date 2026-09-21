@@ -4,12 +4,27 @@
  * Captures Polza's authoritative `usage.cost_rub` per request. The value is NEVER recomputed from
  * tokens × catalog price: if the runtime response lacks it, the record's cost is `null` (unknown).
  */
+import { randomUUID } from "node:crypto";
 import { normalizeUsage, type RawUsageLike } from "./usage.ts";
 
 /** customType used for `pi.appendEntry` session entries. */
 export const POLZA_COST_ENTRY = "polza-cost";
 
+/** Schema version for records that carry a stable monetary event identity. */
+export const POLZA_COST_SCHEMA_VERSION = 2;
+
+/** Attribution origin for records imported from a completed background child. */
+export type PolzaCostOrigin = "background-subagent";
+
 export interface PolzaUsageRecord {
+  /** Absent on legacy v1 records written before event identities existed. */
+  schemaVersion?: 2;
+  /**
+   * Stable identity of ONE observed billed response, generated when the usage is observed and
+   * preserved verbatim across import. Never regenerate on read/import: a fork that copies an
+   * entry must keep the same id so the copy is not counted as new spend.
+   */
+  eventId?: string;
   timestamp: number;
   modelId: string;
   provider: "polza";
@@ -21,16 +36,41 @@ export interface PolzaUsageRecord {
   reasoningTokens: number;
   /** Authoritative billed cost in native RUB; null = unknown (never recomputed). */
   costRub: number | null;
-  /** Optional future attribution. Not set until subagents are implemented. */
+  /** Subagent attribution, known only when the runtime reported it. */
   agentId?: string;
+  /** pi-subagents run identity for imported background spend. */
+  runId?: string;
+  /** How this record entered the root session; absent for ordinary in-session capture. */
+  origin?: PolzaCostOrigin;
   /** Diagnostics from usage normalization, when any. */
   anomalies?: string[];
 }
 
-/** Build a record from a raw Polza usage object. */
-export function recordFromUsage(modelId: string, raw: RawUsageLike, timestamp = Date.now()): PolzaUsageRecord {
+/** Optional attribution/identity passed in when building a record. */
+export interface RecordFromUsageOptions {
+  /** Reuse an existing identity instead of generating a new one (import and tests). */
+  eventId?: string;
+  agentId?: string;
+  runId?: string;
+  origin?: PolzaCostOrigin;
+}
+
+/**
+ * Build a record from a raw Polza usage object.
+ *
+ * The `eventId` is generated HERE, at the moment the usage is observed — not at import and not at
+ * read time. Callers that already hold an identity (the child importer) pass it in via `options`.
+ */
+export function recordFromUsage(
+  modelId: string,
+  raw: RawUsageLike,
+  timestamp = Date.now(),
+  options?: RecordFromUsageOptions,
+): PolzaUsageRecord {
   const usage = normalizeUsage(raw);
   const record: PolzaUsageRecord = {
+    schemaVersion: POLZA_COST_SCHEMA_VERSION,
+    eventId: options?.eventId ?? randomUUID(),
     timestamp,
     modelId,
     provider: "polza",
@@ -41,6 +81,9 @@ export function recordFromUsage(modelId: string, raw: RawUsageLike, timestamp = 
     reasoningTokens: usage.reasoning,
     costRub: usage.costRub,
   };
+  if (options?.agentId !== undefined) record.agentId = options.agentId;
+  if (options?.runId !== undefined) record.runId = options.runId;
+  if (options?.origin !== undefined) record.origin = options.origin;
   if (usage.anomalies.length > 0) record.anomalies = usage.anomalies;
   return record;
 }
@@ -131,13 +174,17 @@ export interface SessionCustomEntryLike {
   data?: unknown;
 }
 
-function coerceRecord(data: unknown): PolzaUsageRecord | null {
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+export function coerceRecord(data: unknown): PolzaUsageRecord | null {
   if (!data || typeof data !== "object") return null;
   const value = data as Record<string, unknown>;
   if (typeof value.modelId !== "string") return null;
   const num = (key: string): number => (typeof value[key] === "number" && Number.isFinite(value[key]) ? (value[key] as number) : 0);
   const costRub = typeof value.costRub === "number" && Number.isFinite(value.costRub) ? value.costRub : null;
-  return {
+  const record: PolzaUsageRecord = {
     timestamp: num("timestamp"),
     modelId: value.modelId,
     provider: "polza",
@@ -148,6 +195,23 @@ function coerceRecord(data: unknown): PolzaUsageRecord | null {
     reasoningTokens: num("reasoningTokens"),
     costRub,
   };
+
+  // Identity and attribution must survive serialize → reopen, or a rebuilt session silently loses
+  // per-agent attribution. Legacy v1 records simply have none of these fields.
+  if (value.schemaVersion === POLZA_COST_SCHEMA_VERSION) record.schemaVersion = POLZA_COST_SCHEMA_VERSION;
+  const eventId = nonEmptyString(value.eventId);
+  if (eventId) record.eventId = eventId;
+  const agentId = nonEmptyString(value.agentId);
+  if (agentId) record.agentId = agentId;
+  const runId = nonEmptyString(value.runId);
+  if (runId) record.runId = runId;
+  if (value.origin === "background-subagent") record.origin = "background-subagent";
+  if (Array.isArray(value.anomalies) && value.anomalies.length > 0) {
+    const anomalies = value.anomalies.filter((item): item is string => typeof item === "string");
+    if (anomalies.length > 0) record.anomalies = anomalies;
+  }
+
+  return record;
 }
 
 /** Rebuild records from session entries (custom entries written by `pi.appendEntry`). */
@@ -170,6 +234,10 @@ export interface ModelCostSummary {
 
 export interface PolzaCostSummary {
   requests: number;
+  /** Requests that carried an authoritative cost. */
+  pricedRequests: number;
+  /** Requests whose cost is unknown (`costRub === null`); never folded into zero. */
+  unpricedRequests: number;
   promptTokens: number;
   cachedTokens: number;
   cacheWriteTokens: number;
@@ -183,6 +251,8 @@ export interface PolzaCostSummary {
 export function summarizeRecords(records: readonly PolzaUsageRecord[]): PolzaCostSummary {
   const summary: PolzaCostSummary = {
     requests: records.length,
+    pricedRequests: 0,
+    unpricedRequests: 0,
     promptTokens: 0,
     cachedTokens: 0,
     cacheWriteTokens: 0,
@@ -197,6 +267,8 @@ export function summarizeRecords(records: readonly PolzaUsageRecord[]): PolzaCos
   const byModel = new Map<string, { requests: number; costRub: number; sawCost: boolean }>();
 
   for (const record of records) {
+    if (record.costRub === null) summary.unpricedRequests += 1;
+    else summary.pricedRequests += 1;
     summary.promptTokens += record.promptTokens;
     summary.cachedTokens += record.cachedTokens;
     summary.cacheWriteTokens += record.cacheWriteTokens;
@@ -225,17 +297,32 @@ export function summarizeRecords(records: readonly PolzaUsageRecord[]): PolzaCos
 /** Extension-owned session accumulator. */
 export class PolzaCostAccumulator {
   private records: PolzaUsageRecord[] = [];
+  /**
+   * Identity index. A completed background run can be reconciled more than once (repeated
+   * completion notification, reopen, fork), so the same `eventId` must not add spend twice.
+   */
+  private seenEventIds = new Set<string>();
 
+  /**
+   * Add one record. Records carrying an `eventId` are counted once per identity; legacy records
+   * without one are always kept (two genuinely identical requests must stay two charges).
+   */
   add(record: PolzaUsageRecord): void {
+    const eventId = record.eventId;
+    if (eventId) {
+      if (this.seenEventIds.has(eventId)) return;
+      this.seenEventIds.add(eventId);
+    }
     this.records.push(record);
   }
 
   addMany(records: readonly PolzaUsageRecord[]): void {
-    this.records.push(...records);
+    for (const record of records) this.add(record);
   }
 
   reset(): void {
     this.records = [];
+    this.seenEventIds = new Set();
   }
 
   get all(): readonly PolzaUsageRecord[] {
