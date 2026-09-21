@@ -13,10 +13,46 @@ import { fileURLToPath } from "node:url";
 
 /** Absolute path to the extension directory (`.pi/extensions/pi-polza`). */
 const EXT_DIR = dirname(fileURLToPath(import.meta.url));
-/** Absolute path to the repository root. */
+/**
+ * Absolute path to the *source repository* root (three levels above the extension).
+ *
+ * Development only: `scripts/probe-*.ts` use it to write into `artifacts/`.
+ * Runtime code must NOT use it for user-facing paths — an installed copy of this
+ * package keeps its files here, so resolving `.env` or the cache against it would
+ * silently bind the installed plugin to the developer's checkout.
+ */
 export const PROJECT_ROOT = resolve(EXT_DIR, "..", "..", "..");
 
-const DOTENV_PATH = resolve(PROJECT_ROOT, ".env");
+/**
+ * The project the user actually works in — the directory Pi was launched from.
+ *
+ * After `pi install /path/to/pi-polza`, the extension code still lives in the
+ * source checkout, but `.env` belongs to the *consumer* project. This is what
+ * makes `<consumer>/.env` work without touching the source repository.
+ */
+export const WORKSPACE_ROOT = process.cwd();
+
+/** Explicit override for the dotenv file location. */
+const ENV_FILE_OVERRIDE = process.env.PI_POLZA_ENV_FILE?.trim();
+
+/**
+ * Resolve which `.env` to read, in order:
+ *   1. `PI_POLZA_ENV_FILE` — explicit override, wins over everything
+ *   2. `<cwd>/.env`        — the project Pi was launched from (installed-package UX)
+ *   3. `<source repo>/.env`— development convenience when running from the checkout
+ * Falls back to the cwd path even when no file exists, so error messages name a
+ * path the user can actually create.
+ */
+function defaultDotEnvPath(): string {
+  if (ENV_FILE_OVERRIDE) return resolve(ENV_FILE_OVERRIDE);
+  const fromWorkspace = resolve(WORKSPACE_ROOT, ".env");
+  if (existsSync(fromWorkspace)) return fromWorkspace;
+  const fromRepo = resolve(PROJECT_ROOT, ".env");
+  if (existsSync(fromRepo)) return fromRepo;
+  return fromWorkspace;
+}
+
+const DOTENV_PATH = defaultDotEnvPath();
 
 let loaded = false;
 

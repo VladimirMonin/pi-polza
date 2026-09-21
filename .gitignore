@@ -25,3 +25,6 @@ npm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# Local package artifacts (npm pack output)
+*.tgz

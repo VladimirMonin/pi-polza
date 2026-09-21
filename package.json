@@ -4,6 +4,26 @@
   "private": true,
   "type": "module",
   "description": "Experimental dynamic Polza AI model provider for Pi Agent (catalog + chat + capabilities + usage + native RUB accounting + balance).",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "polza",
+    "provider",
+    "extension"
+  ],
+  "files": [
+    ".pi/extensions/pi-polza",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./.pi/extensions/pi-polza"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*"
+  },
   "engines": {
     "node": ">=22.6"
   },

@@ -21,7 +21,48 @@ image/video/STT/TTS/embeddings, routing, subagents, dashboard, публикац�
 ## Требования
 
 - Node.js >= 22.6 (запуск TypeScript напрямую через нативный type-stripping).
-- Файл `.env` в корне с `POLZA_API_KEY=...` (в git не попадает, см. `.env.example`).
+- Файл `.env` с `POLZA_API_KEY=...` (в git не попадает, см. `.env.example`).
+  Файл ищется в порядке: `PI_POLZA_ENV_FILE` → `.env` в текущей рабочей директории
+  (проект, из которого запущен Pi) → `.env` в исходном репозитории (только для разработки).
+  Системная переменная `POLZA_API_KEY` работает без `.env`.
+
+## Установка как Pi-пакета
+
+Пакет объявлен в `package.json` через ключ `pi.extensions` и устанавливается
+локально, без публикации в npm. Pi **не копирует** файлы — путь из настроек
+указывает на этот репозиторий, поэтому после нового коммита достаточно
+переустановить (или ничего не делать: код читается из рабочей копии).
+
+```bash
+# Установить из исходников (глобально, в ~/.pi/agent/settings.json)
+pi install /absolute/path/to/pi-polza-connection-plugin
+
+# То же, но только для одного проекта (.pi/settings.json)
+pi install -l /absolute/path/to/pi-polza-connection-plugin
+
+# Проверить, что пакет в списке
+pi list
+
+# Удалить
+pi remove /absolute/path/to/pi-polza-connection-plugin
+```
+
+Проверить готовность артефакта до установки:
+
+```bash
+npm pack --dry-run     # что попадёт в tarball (без .env, artifacts, tests, scripts)
+```
+
+Куда положить ключ после установки — в проект, откуда вы запускаете Pi:
+
+```
+consumer-project/
+├── .env              # POLZA_API_KEY=...
+└── ...               # pi запускается отсюда же
+```
+
+Кэш метаданных OpenRouter создаётся в `<проект>/.pi/pi-polza-cache/` и
+переживает перезапуск; при недоступности OpenRouter используется он.
 
 ## Запуск диагностики
 

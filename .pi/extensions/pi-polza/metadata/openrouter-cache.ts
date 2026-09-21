@@ -7,7 +7,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { PROJECT_ROOT } from "../env.ts";
+import { WORKSPACE_ROOT } from "../env.ts";
 import type { OpenRouterModel } from "./openrouter.ts";
 
 /** Bump when the persisted structure changes; older files are ignored (not deleted). */
@@ -16,7 +16,12 @@ export const OPENROUTER_CACHE_SCHEMA_VERSION = 1;
 /** Consider a cache entry "stale" (still usable, but worth refreshing) after this. */
 export const OPENROUTER_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-export const OPENROUTER_CACHE_DIR = resolve(PROJECT_ROOT, ".pi", "pi-polza-cache");
+/**
+ * Cache lives in the *consumer* project (`.pi/pi-polza-cache`), next to the session it
+ * belongs to — not inside the installed package. Running from the source checkout this
+ * still resolves to `<repo>/.pi/pi-polza-cache`, because cwd is the repo root there.
+ */
+export const OPENROUTER_CACHE_DIR = resolve(WORKSPACE_ROOT, ".pi", "pi-polza-cache");
 export const OPENROUTER_CACHE_FILE = resolve(OPENROUTER_CACHE_DIR, "openrouter.json");
 
 export interface OpenRouterCacheFile {
