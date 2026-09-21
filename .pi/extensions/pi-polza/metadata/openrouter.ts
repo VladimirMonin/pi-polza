@@ -105,7 +105,7 @@ export async function fetchOpenRouterModels(signal?: AbortSignal): Promise<{
   totalCount: number | null;
 }> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(new Error("timeout")), 30_000);
+  const timeout = setTimeout(() => controller.abort(new Error("timeout")), 12_000);
   const onAbort = () => controller.abort(signal?.reason);
   signal?.addEventListener("abort", onAbort, { once: true });
   try {

@@ -8,6 +8,9 @@ artifacts/raw/
 artifacts/*.raw.json
 notes/*.raw.md
 
+# Local metadata cache (OpenRouter snapshot) — machine-local, not source
+.pi/pi-polza-cache/
+
 # Dependencies / build
 node_modules/
 dist/

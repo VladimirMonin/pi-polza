@@ -11,8 +11,7 @@ import { resolve } from "node:path";
 import { fetchCatalog, isUsableChatModel, supportsTextOutput } from "../.pi/extensions/pi-polza/catalog.ts";
 import { PROJECT_ROOT } from "../.pi/extensions/pi-polza/env.ts";
 import { redactJson } from "../.pi/extensions/pi-polza/http.ts";
-import { fetchOpenRouterModels } from "../.pi/extensions/pi-polza/metadata/openrouter.ts";
-import { resolveModels } from "../.pi/extensions/pi-polza/metadata/resolver.ts";
+import { buildPolzaCatalog } from "../.pi/extensions/pi-polza/provider.ts";
 import { summarizeConflicts } from "../.pi/extensions/pi-polza/metadata/conflicts.ts";
 import type { EligibilityReason, ResolvedModel } from "../.pi/extensions/pi-polza/metadata/types.ts";
 import { normalizePolzaModel } from "../.pi/extensions/pi-polza/metadata/polza.ts";
@@ -43,13 +42,10 @@ function printResolved(model: ResolvedModel): void {
 
 async function main(): Promise<void> {
   console.log("Fetching Polza catalog + OpenRouter metadata...");
-  const [{ models: polzaModels }, { models: openRouterModels }] = await Promise.all([
-    fetchCatalog({ limit: 100 }),
-    fetchOpenRouterModels(),
-  ]);
-
-  const openRouterById = new Map(openRouterModels.map((m) => [m.id, m]));
-  const resolved = resolveModels(polzaModels, openRouterById);
+  const build = await buildPolzaCatalog({ allowOpenRouter: true });
+  console.log(`OpenRouter source: ${build.openRouterSource}${build.openRouterError ? ` (${build.openRouterError})` : ""}`);
+  const polzaModels = build.resolved.map((r) => r.raw.polza);
+  const resolved = build.resolved;
 
   const chatDeclared = polzaModels.filter((m) => m.type === "chat");
   const chatUsable = polzaModels.filter(isUsableChatModel);
