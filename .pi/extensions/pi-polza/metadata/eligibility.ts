@@ -25,17 +25,26 @@ export function evaluateEligibility(input: EligibilityInput): { eligible: boolea
   if (!polza.endpoints.includes(CHAT_COMPLETIONS_ENDPOINT)) reasons.push("no_chat_completions_endpoint");
 
   const outputModalities = modalities.output.value;
-  if (outputModalities && outputModalities.length > 0) {
+  if (outputModalities === null) {
+    reasons.push("missing_output_modalities");
+  } else if (outputModalities.length > 0) {
     const hasText = outputModalities.includes("text");
-    const hasEmbeddings = outputModalities.includes("embeddings");
-    if (hasEmbeddings && !hasText) reasons.push("embeddings_only");
-    if (!hasText) reasons.push("not_text_output");
+    if (!hasText) {
+      if (outputModalities.includes("embeddings")) reasons.push("embeddings_only");
+      reasons.push("unsupported_output_modality");
+    }
   }
 
   const inputModalities = modalities.input.value;
-  if (inputModalities && inputModalities.length > 0 && !inputModalities.includes("text")) {
-    reasons.push("unsupported_by_pi");
+  if (inputModalities === null) {
+    reasons.push("missing_input_modalities");
+  } else if (inputModalities.length > 0 && !inputModalities.includes("text")) {
+    // Known capability that Pi cannot represent as a native chat input (e.g. audio-only STT).
+    reasons.push("unsupported_input_modality");
   }
+
+  // `unsupported_by_pi` is reserved for a *known* capability that Pi has no representation for
+  // at all. It is intentionally not used for unknown metadata (see the missing_* reasons above).
 
   if (limits.contextWindow.value === null) reasons.push("missing_context_window");
   if (limits.maxCompletionTokens.value === null) reasons.push("missing_max_completion_tokens");

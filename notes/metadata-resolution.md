@@ -23,8 +23,11 @@ Modules: `metadata/{polza,openrouter,resolver,provenance,conflicts,eligibility,t
 
 ## Priority
 
-Per field: **Polza → OpenRouter → explicit override → unknown** (ТЗ v2 §3). When both carry a
-concrete, different value, Polza wins and the disagreement is recorded as a conflict.
+Per field: **explicit verified override → Polza → OpenRouter → unknown**.
+
+An override is a *surgical patch*: scoped to a single model id + single field, documented and
+test-covered. It is not a bulk metadata source. Polza/OpenRouter disagreement is still recorded as a
+conflict even when an override supplies the returned value.
 
 Every resolved field is a `Provenanced<T>` = `{ value, source }` with
 `source ∈ {polza, openrouter, override, unknown}`, so provenance survives normalization.
@@ -107,6 +110,15 @@ Polza mirrors OpenRouter's catalog. For now Polza's value is kept and the confli
 ## Pi eligibility
 
 Eligibility is decided only after enrichment; no placeholder values are fabricated.
+Dedicated reason codes:
+
+```
+missing_context_window        missing_input_modalities
+missing_max_completion_tokens missing_output_modalities
+unsupported_input_modality    unsupported_output_modality
+not_chat_model                embeddings_only
+no_chat_completions_endpoint  unsupported_by_pi (reserved)
+```
 
 ```
 Eligible: 285
@@ -129,6 +141,8 @@ because their max output is unknown after enrichment; they stay in the internal 
 - `pricing.openRouterReference` — OpenRouter USD/token, **diagnostic only**, never billing.
 - Actual per-request cost remains `usage.cost_rub` (see `notes/usage-experiment.md`).
 - No `OpenRouter price × markup` formula is used anywhere.
+- Pi's per-model `cost` is set to `0` as a **compatibility placeholder** (Pi needs USD, Polza is
+  RUB, FX is forbidden). It is never business truth; `/polza-cost` is the real RUB surface.
 
 ## Reproduce
 

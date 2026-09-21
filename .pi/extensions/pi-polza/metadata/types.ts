@@ -38,8 +38,11 @@ export interface ResolvedPricing {
 export type EligibilityReason =
   | "missing_context_window"
   | "missing_max_completion_tokens"
+  | "missing_input_modalities"
+  | "missing_output_modalities"
+  | "unsupported_input_modality"
+  | "unsupported_output_modality"
   | "not_chat_model"
-  | "not_text_output"
   | "embeddings_only"
   | "no_chat_completions_endpoint"
   | "unsupported_by_pi";

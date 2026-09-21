@@ -1,9 +1,10 @@
 /**
  * Metadata resolver: merge Polza (authoritative) with OpenRouter (enrichment) into a ResolvedModel.
  *
- * Priority per field: Polza → OpenRouter → explicit override → unknown.
- * When Polza and OpenRouter both provide different concrete values, Polza wins and the conflict is
- * recorded (see conflicts.ts).
+ * Priority per field: explicit verified override → Polza → OpenRouter → unknown.
+ * Overrides are surgical (per model id + per field), documented and test-covered; they are NOT a
+ * bulk metadata source. When Polza and OpenRouter both provide different concrete values, Polza
+ * wins and the conflict is recorded — even if an override is what is ultimately returned.
  */
 import { normalizePolzaModel, type NormalizedPolzaModel } from "./polza.ts";
 import { normalizeOpenRouterModel, type OpenRouterModel } from "./openrouter.ts";
@@ -25,12 +26,16 @@ export interface ResolveOverrides {
 }
 
 export interface ResolveOptions {
-  /** Explicit verified overrides — applied only when both Polza and OpenRouter are silent. */
+  /** Surgical verified overrides — highest priority, per field. */
   overrides?: ResolveOverrides;
   /** Set to `true` only after a real tool loop through Polza succeeded. */
   verifiedToolSupport?: boolean | "unknown";
 }
 
+/**
+ * Resolve one field. Priority: override → Polza → OpenRouter → unknown.
+ * Polza/OpenRouter conflicts are still recorded when both are concrete and differ.
+ */
 function pick<T>(
   field: string,
   polzaValue: T | null,
@@ -39,9 +44,8 @@ function pick<T>(
   conflicts: MetadataConflict[],
 ): Provenanced<T> {
   const merged = resolveWithConflict<T>(field, fromPolza(polzaValue), fromOpenRouter(openRouterValue), conflicts);
-  if (merged.value !== null) return merged;
   if (overrideValue !== undefined && overrideValue !== null) return fromOverride(overrideValue);
-  return unknown<T>();
+  return merged;
 }
 
 export function resolveModel(

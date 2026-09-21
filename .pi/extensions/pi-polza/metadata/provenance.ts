@@ -4,7 +4,8 @@
  * Every resolved technical field carries where its value came from, so provenance survives
  * normalization instead of being flattened away.
  *
- * Priority (highest first): polza → openrouter → override → unknown.
+ * Priority (highest first): override → polza → openrouter → unknown.
+ * (`override` is a surgical, documented, verified patch — not a bulk source.)
  */
 
 export type MetadataSource = "polza" | "openrouter" | "override" | "unknown";

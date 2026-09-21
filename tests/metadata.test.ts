@@ -111,23 +111,42 @@ test("Fake chat embedding is rejected", () => {
   const resolved = resolveModel(polza, null);
   assert.equal(resolved.piEligibility.eligible, false);
   assert.ok(resolved.piEligibility.reasons.includes("embeddings_only"));
-  assert.ok(resolved.piEligibility.reasons.includes("not_text_output"));
+  assert.ok(resolved.piEligibility.reasons.includes("unsupported_output_modality"));
 });
 
-test("Explicit override is used only when Polza and OpenRouter are silent", () => {
-  const polza = polzaModel({ id: "vendor/override", contextLength: null, maxCompletionTokens: null });
-  const resolved = resolveModel(polza, null, {
-    overrides: { contextWindow: 4096, maxCompletionTokens: 2048 },
-  });
+test("Explicit verified override wins over Polza and OpenRouter", () => {
+  const polza = polzaModel({ id: "vendor/override", contextLength: 1000, maxCompletionTokens: 100 });
+  const or = openRouterModel({ id: "vendor/override", contextLength: 9000, maxCompletionTokens: 3000 });
+  const resolved = resolveModel(polza, or, { overrides: { contextWindow: 4096, maxCompletionTokens: 2048 } });
+
   assert.equal(resolved.limits.contextWindow.value, 4096);
   assert.equal(resolved.limits.contextWindow.source, "override");
+  assert.equal(resolved.limits.maxCompletionTokens.value, 2048);
   assert.equal(resolved.limits.maxCompletionTokens.source, "override");
+  // The Polza/OpenRouter disagreement is still recorded.
+  assert.ok(resolved.conflicts.some((c) => c.field === "contextWindow"));
+});
 
-  const withOpenRouter = resolveModel(polza, openRouterModel({ id: "vendor/override", contextLength: 9000, maxCompletionTokens: 3000 }), {
-    overrides: { contextWindow: 4096, maxCompletionTokens: 2048 },
+test("Override applies to a single field only", () => {
+  const polza = polzaModel({ id: "vendor/surgical", contextLength: 1000, maxCompletionTokens: 100 });
+  const resolved = resolveModel(polza, null, { overrides: { maxCompletionTokens: 512 } });
+  assert.equal(resolved.limits.contextWindow.source, "polza");
+  assert.equal(resolved.limits.maxCompletionTokens.value, 512);
+  assert.equal(resolved.limits.maxCompletionTokens.source, "override");
+});
+
+test("Missing modalities produce dedicated reasons, not unsupported_by_pi", () => {
+  const polza = polzaModel({
+    id: "vendor/nomodal",
+    contextLength: 1000,
+    maxCompletionTokens: 100,
+    inputModalities: [],
+    outputModalities: [],
   });
-  assert.equal(withOpenRouter.limits.contextWindow.value, 9000);
-  assert.equal(withOpenRouter.limits.contextWindow.source, "openrouter");
+  const resolved = resolveModel(polza, null);
+  assert.ok(resolved.piEligibility.reasons.includes("missing_input_modalities"));
+  assert.ok(resolved.piEligibility.reasons.includes("missing_output_modalities"));
+  assert.ok(!resolved.piEligibility.reasons.includes("unsupported_by_pi"));
 });
 
 test("Integration: enrichment recovers limits from OpenRouter snapshots", () => {
