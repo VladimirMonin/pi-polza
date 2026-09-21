@@ -1,0 +1,24 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Raw diagnostics that may contain account data or key-adjacent payloads
+artifacts/raw/
+artifacts/*.raw.json
+notes/*.raw.md
+
+# Dependencies / build
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
