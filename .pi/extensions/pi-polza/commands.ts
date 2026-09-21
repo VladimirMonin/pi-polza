@@ -1,0 +1,131 @@
+/**
+ * Extension commands: /polza-model-info and /polza-balance.
+ *
+ * Values are shown with their provenance. Unknown values read as `unknown`, never `0`.
+ */
+import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import { fetchBalance, formatRub } from "./balance.ts";
+import { extractInternalCapabilities } from "./mapper.ts";
+import type { Provenanced } from "./metadata/provenance.ts";
+import type { ResolvedModel } from "./metadata/types.ts";
+
+export interface CommandDeps {
+  /** Current internal registry (including ineligible models). */
+  getRegistry: () => ResolvedModel[];
+  getLastBuildInfo: () => { polzaCount: number; eligible: number; openRouterError: string | null; fetchedAt: number } | null;
+}
+
+function show(value: unknown): string {
+  if (value === null || value === undefined) return "unknown";
+  if (typeof value === "number") return value.toLocaleString("en-US");
+  return String(value);
+}
+
+function withSource<T>(field: Provenanced<T>, format: (value: T) => string = show): string {
+  if (field.value === null) return "unknown";
+  return `${format(field.value)} (source: ${field.source})`;
+}
+
+function yesNoUnknown(value: boolean | null): string {
+  if (value === null) return "unknown";
+  return value ? "yes" : "no";
+}
+
+function rubPerMillion(value: number | null): string {
+  return value === null ? "unknown" : `${value} RUB / 1M`;
+}
+
+function modelInfoLines(model: ResolvedModel): string[] {
+  const caps = extractInternalCapabilities(model);
+  const price = model.pricing.polzaRUB;
+  const verified = model.verifiedToolSupport === "unknown" ? "unknown" : model.verifiedToolSupport ? "yes" : "no";
+
+  const lines: string[] = [
+    `Model:        ${model.id}`,
+    `Provider:     polza (availability: ${model.availability.polza ? "yes" : "no"})`,
+    "",
+    `Context:      ${withSource(model.limits.contextWindow)}`,
+    `Max output:   ${withSource(model.limits.maxCompletionTokens)}`,
+    "",
+    `Input:        ${show(model.modalities.input.value)} (source: ${model.modalities.input.source})`,
+    `              Pi native: ${(model.capabilities.vision.value === null ? ["text"] : model.modalities.input.value?.filter((m) => m === "text" || m === "image") ?? ["text"]).join(", ")}`,
+  ];
+  if (caps.internalInputModalities.length > 0) {
+    lines.push(`              internal only (not sent by Pi): ${caps.internalInputModalities.join(", ")}`);
+  }
+  lines.push(
+    `Vision:       ${withSource(model.capabilities.vision)}`,
+    "",
+    `Tools:        declared: ${yesNoUnknown(caps.tools)} (source: ${model.capabilities.tools.source}), verified: ${verified}`,
+    `Tool choice:  ${yesNoUnknown(caps.toolChoice)} (source: ${model.capabilities.toolChoice.source})`,
+    `Reasoning:    declared: ${yesNoUnknown(model.capabilities.reasoning.value)} (source: ${model.capabilities.reasoning.source})`,
+    `Reasoning eff:${yesNoUnknown(model.capabilities.reasoningEffort.value)} (source: ${model.capabilities.reasoningEffort.source})`,
+    `Structured:   ${yesNoUnknown(caps.structuredOutputs)} (source: ${model.capabilities.structuredOutputs.source})`,
+    "",
+    "Pricing (native RUB, source: Polza catalog — reference estimate):",
+    `  Input:        ${rubPerMillion(price.promptPerMillion)}`,
+    `  Output:       ${rubPerMillion(price.completionPerMillion)}`,
+    `  Cache read:   ${rubPerMillion(price.cacheReadPerMillion)}`,
+    `  Cache write:  ${rubPerMillion(price.cacheWritePerMillion)}`,
+    "  Actual billed cost comes from usage.cost_rub, not from this estimate.",
+    "",
+    `Pi eligible:  ${model.piEligibility.eligible ? "yes" : `no (${model.piEligibility.reasons.join(", ")})`}`,
+  );
+
+  if (model.conflicts.length > 0) {
+    lines.push("", `Metadata conflicts vs OpenRouter: ${model.conflicts.length}`);
+    for (const conflict of model.conflicts.slice(0, 6)) {
+      lines.push(`  ${conflict.field}: polza=${JSON.stringify(conflict.polza)} openrouter=${JSON.stringify(conflict.openrouter)}`);
+    }
+  }
+
+  if (model.openRouterId) lines.push(`OpenRouter id: ${model.openRouterId}`);
+  return lines;
+}
+
+export function registerPolzaCommands(pi: ExtensionAPI, deps: CommandDeps): void {
+  pi.registerCommand("polza-model-info", {
+    description: "Show capabilities, limits, pricing and metadata sources for the current Polza model",
+    handler: async (_args: string, ctx: ExtensionCommandContext) => {
+      const model = ctx.model;
+      if (!model) {
+        ctx.ui.notify("No active model.", "warning");
+        return;
+      }
+      if (model.provider !== "polza") {
+        ctx.ui.notify(`Current model is not a Polza model (provider: ${model.provider}).`, "warning");
+        return;
+      }
+      const resolved = deps.getRegistry().find((entry) => entry.id === model.id);
+      if (!resolved) {
+        ctx.ui.notify(`No metadata for "${model.id}" in the Polza registry.`, "warning");
+        return;
+      }
+      ctx.ui.notify(modelInfoLines(resolved).join("\n"), "info");
+    },
+  });
+
+  pi.registerCommand("polza-balance", {
+    description: "Show the Polza account balance (native RUB)",
+    handler: async (_args: string, ctx: ExtensionCommandContext) => {
+      try {
+        const balance = await fetchBalance(ctx.signal);
+        ctx.ui.notify(
+          [
+            "Polza balance",
+            `  Balance:         ${formatRub(balance.amount)}`,
+            `  Available:       ${formatRub(balance.available)}`,
+            `  Reserved:        ${formatRub(balance.reservedAmount)}`,
+            `  Lifetime spent:  ${formatRub(balance.spentAmount)}`,
+            balance.updatedAt ? `  Updated:         ${balance.updatedAt}` : "  Updated:         unknown",
+            "",
+            "`Lifetime spent` is global account spend, not the current session cost.",
+          ].join("\n"),
+          "info",
+        );
+      } catch (error) {
+        ctx.ui.notify(`Failed to fetch Polza balance: ${error instanceof Error ? error.message : String(error)}`, "error");
+      }
+    },
+  });
+}
