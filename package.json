@@ -13,6 +13,8 @@
     "probe:chat": "node scripts/probe-chat.ts",
     "probe:stream": "node scripts/probe-stream.ts",
     "probe:cache": "node scripts/probe-cache.ts",
+    "probe:openrouter": "node scripts/probe-openrouter.ts",
+    "probe:enrichment": "node scripts/probe-enrichment.ts",
     "test": "node --test tests/"
   }
 }

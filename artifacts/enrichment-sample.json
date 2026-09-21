@@ -1,0 +1,651 @@
+{
+  "note": "Polza entries whose limits need OpenRouter enrichment, captured by probe-enrichment",
+  "polzaModels": [
+    {
+      "id": "google/gemini-2.5-flash",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "Google: Gemini 2.5 Flash",
+      "type": "chat",
+      "short_description": null,
+      "icon_provider_slug": "google",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1769617391,
+      "architecture": {
+        "modality": null,
+        "input_modalities": [
+          "file",
+          "image",
+          "text",
+          "audio",
+          "video"
+        ],
+        "output_modalities": [
+          "text",
+          "audio"
+        ],
+        "tokenizer": null,
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "mie",
+        "icon_provider_slug": "google",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 1048576,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "20.42415000",
+          "completion_per_million": "170.20125000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "max_tokens"
+        ],
+        "default_parameters": null
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "google/gemini-2.5-pro",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "Google: Gemini 2.5 Pro",
+      "type": "chat",
+      "short_description": "",
+      "icon_provider_slug": "google",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1769617392,
+      "architecture": {
+        "modality": null,
+        "input_modalities": [
+          "text",
+          "image",
+          "file",
+          "audio",
+          "video"
+        ],
+        "output_modalities": [
+          "text",
+          "audio"
+        ],
+        "tokenizer": null,
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "mie",
+        "icon_provider_slug": "google",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 1048576,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "86.23530000",
+          "completion_per_million": "680.80500000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "max_tokens"
+        ],
+        "default_parameters": null
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "google/gemini-3.1-pro-preview",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "Google: Gemini 3.1 Pro Preview",
+      "type": "chat",
+      "short_description": "Создана для задач с длинным контекстом. Быстро анализирует, генерирует текст, понимает запросы.",
+      "icon_provider_slug": "google",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1771519909,
+      "architecture": {
+        "modality": null,
+        "input_modalities": [
+          "audio",
+          "file",
+          "image",
+          "text",
+          "video"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": null,
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "mie",
+        "icon_provider_slug": "google",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 1048576,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "113.46750000",
+          "completion_per_million": "794.27250000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "max_tokens"
+        ],
+        "default_parameters": null
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "google/gemma-3-4b-it",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "Google: Gemma 3 4B",
+      "type": "chat",
+      "short_description": null,
+      "icon_provider_slug": "google",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1769617394,
+      "architecture": {
+        "modality": "text+image->text",
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Gemini",
+        "instruct_type": "gemma"
+      },
+      "top_provider": {
+        "name": "Chutes",
+        "icon_provider_slug": "google",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 96000,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "2.00393422",
+          "completion_per_million": "8.01963411",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "top_p",
+          "stop",
+          "frequency_penalty",
+          "presence_penalty",
+          "seed",
+          "top_k",
+          "repetition_penalty"
+        ],
+        "default_parameters": {
+          "temperature": null,
+          "top_p": null,
+          "frequency_penalty": null
+        }
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "minimax/minimax-m2.1",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "MiniMax: MiniMax M2.1",
+      "type": "chat",
+      "short_description": null,
+      "icon_provider_slug": "minimax",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1769617401,
+      "architecture": {
+        "modality": "text->text",
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Other",
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "DeepInfra",
+        "icon_provider_slug": "minimax",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 196608,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "31.77090000",
+          "completion_per_million": "111.78650000",
+          "input_cache_read_per_million": "3.41243008",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "reasoning",
+          "include_reasoning",
+          "max_tokens",
+          "temperature",
+          "top_p",
+          "stop",
+          "frequency_penalty",
+          "presence_penalty",
+          "repetition_penalty",
+          "top_k",
+          "seed",
+          "min_p",
+          "response_format",
+          "tools",
+          "tool_choice"
+        ],
+        "default_parameters": {
+          "temperature": 1,
+          "top_p": 0.9,
+          "frequency_penalty": null
+        }
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "moonshotai/kimi-k2",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "MoonshotAI: Kimi K2 0711",
+      "type": "chat",
+      "short_description": null,
+      "icon_provider_slug": "moonshotai",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1769617405,
+      "architecture": {
+        "modality": "text->text",
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Other",
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "DeepInfra",
+        "icon_provider_slug": "moonshotai",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 131000,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "64.71850000",
+          "completion_per_million": "258.87400000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "max_tokens",
+          "temperature",
+          "top_p",
+          "stop",
+          "frequency_penalty",
+          "presence_penalty",
+          "repetition_penalty",
+          "top_k",
+          "seed",
+          "min_p",
+          "response_format",
+          "tools",
+          "tool_choice"
+        ],
+        "default_parameters": {
+          "temperature": null,
+          "top_p": null,
+          "frequency_penalty": null
+        }
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "moonshotai/kimi-k2-thinking",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "MoonshotAI: Kimi K2 Thinking",
+      "type": "chat",
+      "short_description": null,
+      "icon_provider_slug": "moonshotai",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1769617406,
+      "architecture": {
+        "modality": "text->text",
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Other",
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "GMICloud",
+        "icon_provider_slug": "moonshotai",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 262144,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "94.13600000",
+          "completion_per_million": "141.20400000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "reasoning",
+          "include_reasoning",
+          "max_tokens",
+          "temperature",
+          "top_p",
+          "seed",
+          "structured_outputs",
+          "response_format"
+        ],
+        "default_parameters": {
+          "temperature": null,
+          "top_p": null,
+          "frequency_penalty": null
+        }
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "openai/gpt-5.1-codex",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "OpenAI: GPT-5.1-Codex",
+      "type": "chat",
+      "short_description": "Оптимизирована для разработки ПО. Генерирует, отлаживает, рефакторит код. Настраиваемое \"усилие рассуждений\" для баланса скорости и глубины анализа.",
+      "icon_provider_slug": "openai",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1769617414,
+      "architecture": {
+        "modality": null,
+        "input_modalities": [
+          "text",
+          "image",
+          "file",
+          "video",
+          "audio"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": null,
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "mie",
+        "icon_provider_slug": "openai",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 400000,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "114.72825000",
+          "completion_per_million": "917.82600000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "max_tokens"
+        ],
+        "default_parameters": null
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "openai/gpt-5.2",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "OpenAI: GPT-5.2",
+      "type": "chat",
+      "short_description": "Оптимизирована для сложных задач, агентной деятельности и работы с длинным контекстом. Динамически распределяет ресурсы для точного и быстрого анализа.",
+      "icon_provider_slug": "openai",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1769617415,
+      "architecture": {
+        "modality": null,
+        "input_modalities": [
+          "file",
+          "image",
+          "text",
+          "video",
+          "audio"
+        ],
+        "output_modalities": [
+          "text",
+          "image"
+        ],
+        "tokenizer": null,
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "mie",
+        "icon_provider_slug": "openai",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 400000,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "99.85140000",
+          "completion_per_million": "794.27250000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "max_tokens"
+        ],
+        "default_parameters": null
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "openai/gpt-5.2-codex",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "OpenAI: GPT-5.2-Codex",
+      "type": "chat",
+      "short_description": "Оптимизирована под разработку ПО. Генерирует код, рефакторит, отвечает на задачи. Поддерживает мультимодальность, гибкую настройку рассуждений.",
+      "icon_provider_slug": "openai",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1769617415,
+      "architecture": {
+        "modality": null,
+        "input_modalities": [
+          "text",
+          "image",
+          "file",
+          "video",
+          "audio"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": null,
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "mie",
+        "icon_provider_slug": "openai",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 400000,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "160.36740000",
+          "completion_per_million": "1283.44350000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "max_tokens"
+        ],
+        "default_parameters": null
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "openai/gpt-5.3-codex",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "OpenAI: GPT-5.3-Codex",
+      "type": "chat",
+      "short_description": "Автоматизирует полный цикл разработки программного обеспечения. Анализирует репозитории целиком благодаря контекстному окну в 400 000 токенов.",
+      "icon_provider_slug": "openai",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": false,
+      "created": 1772029355,
+      "architecture": {
+        "modality": null,
+        "input_modalities": [
+          "text",
+          "image",
+          "file",
+          "video",
+          "audio"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": null,
+        "instruct_type": null
+      },
+      "top_provider": {
+        "name": "mie",
+        "icon_provider_slug": "openai",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 400000,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "160.36740000",
+          "completion_per_million": "1283.44350000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "max_tokens"
+        ],
+        "default_parameters": null
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    },
+    {
+      "id": "qwen/qwen3-235b-a22b",
+      "object": "model",
+      "owned_by": "polza-ai",
+      "name": "Qwen: Qwen3 235B A22B",
+      "type": "chat",
+      "short_description": "Работает с 131K токенов, ускоряет рассуждения и программирование. Подходит для анализа больших данных и многоязычной коммуникации.",
+      "icon_provider_slug": "qwen",
+      "is_fz152_compliant": false,
+      "stores_data_in_russia": true,
+      "created": 1769617422,
+      "architecture": {
+        "modality": "text->text",
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Qwen3",
+        "instruct_type": "qwen3"
+      },
+      "top_provider": {
+        "name": "Together",
+        "icon_provider_slug": "qwen",
+        "is_fz152_compliant": false,
+        "stores_data_in_russia": false,
+        "is_hosted_on_polza_infrastructure": false,
+        "is_moderated": false,
+        "context_length": 40960,
+        "max_completion_tokens": null,
+        "pricing": {
+          "prompt_per_million": "23.53400000",
+          "completion_per_million": "70.60200000",
+          "currency": "RUB"
+        },
+        "supported_parameters": [
+          "reasoning",
+          "include_reasoning",
+          "max_tokens",
+          "temperature",
+          "top_p",
+          "stop",
+          "frequency_penalty",
+          "presence_penalty",
+          "top_k",
+          "repetition_penalty",
+          "logit_bias",
+          "min_p"
+        ],
+        "default_parameters": {
+          "temperature": null,
+          "top_p": null,
+          "frequency_penalty": null
+        }
+      },
+      "endpoints": [
+        "/api/v1/chat/completions"
+      ]
+    }
+  ]
+}

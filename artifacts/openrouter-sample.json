@@ -1,0 +1,675 @@
+{
+  "note": "OpenRouter metadata samples captured by scripts/probe-openrouter.ts",
+  "models": [
+    {
+      "id": "google/gemini-2.5-flash",
+      "canonical_slug": "google/gemini-2.5-flash",
+      "hugging_face_id": "",
+      "name": "Google: Gemini 2.5 Flash",
+      "created": 1750172488,
+      "description": "Gemini 2.5 Flash is Google's state-of-the-art workhorse model, specifically designed for advanced reasoning, coding, mathematics, and scientific tasks. It includes built-in \"thinking\" capabilities, enabling it to provide responses with greater...",
+      "context_length": 1048576,
+      "architecture": {
+        "modality": "text+image+file+audio+video->text",
+        "input_modalities": [
+          "file",
+          "image",
+          "text",
+          "audio",
+          "video"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Gemini",
+        "instruct_type": null
+      },
+      "pricing": {
+        "prompt": "0.0000003",
+        "completion": "0.0000025",
+        "image": "0.0000003",
+        "audio": "0.000001",
+        "input_audio_cache": "0.0000001",
+        "web_search": "0.014",
+        "internal_reasoning": "0.0000025",
+        "input_cache_read": "0.00000003",
+        "input_cache_write": "0.0000000833333333333333"
+      },
+      "top_provider": {
+        "context_length": 1048576,
+        "max_completion_tokens": 65535,
+        "is_moderated": false
+      },
+      "per_request_limits": null,
+      "supported_parameters": [
+        "include_reasoning",
+        "max_tokens",
+        "reasoning",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_p"
+      ],
+      "default_parameters": {
+        "temperature": null,
+        "top_p": null,
+        "top_k": null,
+        "frequency_penalty": null,
+        "presence_penalty": null,
+        "repetition_penalty": null
+      },
+      "supported_voices": null,
+      "knowledge_cutoff": "2025-01-31",
+      "expiration_date": "2026-10-20",
+      "links": {
+        "details": "/api/v1/models/google/gemini-2.5-flash/endpoints"
+      },
+      "benchmarks": {
+        "design_arena": [
+          {
+            "arena": "models",
+            "category": "3d",
+            "elo": 1100,
+            "win_rate": 47.4,
+            "rank": 89
+          },
+          {
+            "arena": "models",
+            "category": "codecategories",
+            "elo": 1118,
+            "win_rate": 46.9,
+            "rank": 90
+          },
+          {
+            "arena": "models",
+            "category": "dataviz",
+            "elo": 1149,
+            "win_rate": 49.1,
+            "rank": 77
+          },
+          {
+            "arena": "models",
+            "category": "gamedev",
+            "elo": 1089,
+            "win_rate": 44.3,
+            "rank": 93
+          },
+          {
+            "arena": "models",
+            "category": "uicomponent",
+            "elo": 1109,
+            "win_rate": 48.9,
+            "rank": 85
+          },
+          {
+            "arena": "models",
+            "category": "website",
+            "elo": 1127,
+            "win_rate": 47.1,
+            "rank": 90
+          },
+          {
+            "arena": "models",
+            "category": "svg",
+            "elo": 1043,
+            "win_rate": 43.1,
+            "rank": 75
+          }
+        ]
+      },
+      "reasoning": {
+        "mandatory": false
+      }
+    },
+    {
+      "id": "google/gemini-2.5-pro",
+      "canonical_slug": "google/gemini-2.5-pro",
+      "hugging_face_id": "",
+      "name": "Google: Gemini 2.5 Pro",
+      "created": 1750169544,
+      "description": "Gemini 2.5 Pro is Google’s state-of-the-art AI model designed for advanced reasoning, coding, mathematics, and scientific tasks. It employs “thinking” capabilities, enabling it to reason through responses with enhanced accuracy...",
+      "context_length": 1048576,
+      "architecture": {
+        "modality": "text+image+file+audio+video->text",
+        "input_modalities": [
+          "text",
+          "image",
+          "file",
+          "audio",
+          "video"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Gemini",
+        "instruct_type": null
+      },
+      "pricing": {
+        "prompt": "0.00000125",
+        "completion": "0.00001",
+        "image": "0.00000125",
+        "audio": "0.00000125",
+        "input_audio_cache": "0.000000125",
+        "web_search": "0.014",
+        "internal_reasoning": "0.00001",
+        "input_cache_read": "0.000000125",
+        "input_cache_write": "0.000000375",
+        "overrides": [
+          {
+            "min_prompt_tokens": 200000,
+            "prompt": "0.0000025",
+            "completion": "0.000015",
+            "audio": "0.0000025",
+            "input_audio_cache": "0.00000025",
+            "input_cache_read": "0.00000025"
+          }
+        ]
+      },
+      "top_provider": {
+        "context_length": 1048576,
+        "max_completion_tokens": 65536,
+        "is_moderated": false
+      },
+      "per_request_limits": null,
+      "supported_parameters": [
+        "include_reasoning",
+        "max_tokens",
+        "reasoning",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_p"
+      ],
+      "default_parameters": {
+        "temperature": null,
+        "top_p": null,
+        "frequency_penalty": null
+      },
+      "supported_voices": null,
+      "knowledge_cutoff": "2025-01-31",
+      "expiration_date": "2026-10-20",
+      "links": {
+        "details": "/api/v1/models/google/gemini-2.5-pro/endpoints"
+      },
+      "benchmarks": {
+        "design_arena": [
+          {
+            "arena": "models",
+            "category": "3d",
+            "elo": 1109,
+            "win_rate": 50.6,
+            "rank": 84
+          },
+          {
+            "arena": "models",
+            "category": "codecategories",
+            "elo": 1166,
+            "win_rate": 57.5,
+            "rank": 70
+          },
+          {
+            "arena": "models",
+            "category": "dataviz",
+            "elo": 1236,
+            "win_rate": 68.2,
+            "rank": 38
+          },
+          {
+            "arena": "models",
+            "category": "gamedev",
+            "elo": 1135,
+            "win_rate": 54.2,
+            "rank": 76
+          },
+          {
+            "arena": "models",
+            "category": "uicomponent",
+            "elo": 1156,
+            "win_rate": 57.5,
+            "rank": 70
+          },
+          {
+            "arena": "models",
+            "category": "website",
+            "elo": 1179,
+            "win_rate": 58.4,
+            "rank": 69
+          }
+        ],
+        "artificial_analysis": {
+          "intelligence_index": 16.1,
+          "coding_index": 33.3,
+          "agentic_index": 1.6
+        }
+      },
+      "reasoning": {
+        "mandatory": true
+      }
+    },
+    {
+      "id": "openai/gpt-5.2",
+      "canonical_slug": "openai/gpt-5.2-20251211",
+      "hugging_face_id": "",
+      "name": "OpenAI: GPT-5.2",
+      "created": 1765389775,
+      "description": "GPT-5.2 is the latest frontier-grade model in the GPT-5 series, offering stronger agentic and long context perfomance compared to GPT-5.1. It uses adaptive reasoning to allocate computation dynamically, responding quickly...",
+      "context_length": 400000,
+      "architecture": {
+        "modality": "text+image+file->text",
+        "input_modalities": [
+          "file",
+          "image",
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "GPT",
+        "instruct_type": null
+      },
+      "pricing": {
+        "prompt": "0.00000175",
+        "completion": "0.000014",
+        "web_search": "0.01",
+        "input_cache_read": "0.000000175"
+      },
+      "top_provider": {
+        "context_length": 400000,
+        "max_completion_tokens": 128000,
+        "is_moderated": true
+      },
+      "per_request_limits": null,
+      "supported_parameters": [
+        "include_reasoning",
+        "max_completion_tokens",
+        "max_tokens",
+        "reasoning",
+        "reasoning_effort",
+        "response_format",
+        "seed",
+        "structured_outputs",
+        "tool_choice",
+        "tools"
+      ],
+      "default_parameters": {
+        "temperature": null,
+        "top_p": null,
+        "top_k": null,
+        "frequency_penalty": null,
+        "presence_penalty": null,
+        "repetition_penalty": null
+      },
+      "supported_voices": null,
+      "knowledge_cutoff": null,
+      "expiration_date": null,
+      "links": {
+        "details": "/api/v1/models/openai/gpt-5.2-20251211/endpoints"
+      },
+      "benchmarks": {
+        "design_arena": [
+          {
+            "arena": "models",
+            "category": "website",
+            "elo": 1207,
+            "win_rate": 54.4,
+            "rank": 52
+          },
+          {
+            "arena": "agents",
+            "category": "androidnative",
+            "elo": 1073,
+            "win_rate": 49.1,
+            "rank": 31
+          },
+          {
+            "arena": "agents",
+            "category": "fullstack",
+            "elo": 1052,
+            "win_rate": 44.3,
+            "rank": 37
+          },
+          {
+            "arena": "agents",
+            "category": "godotgamedev",
+            "elo": 1142,
+            "win_rate": 48.1,
+            "rank": 18
+          },
+          {
+            "arena": "agents",
+            "category": "mobileapps",
+            "elo": 1123,
+            "win_rate": 46.8,
+            "rank": 35
+          },
+          {
+            "arena": "agents",
+            "category": "webapps",
+            "elo": 1101,
+            "win_rate": 45.5,
+            "rank": 34
+          },
+          {
+            "arena": "models",
+            "category": "3d",
+            "elo": 1108,
+            "win_rate": 41.5,
+            "rank": 85
+          },
+          {
+            "arena": "models",
+            "category": "codecategories",
+            "elo": 1183,
+            "win_rate": 49.6,
+            "rank": 63
+          },
+          {
+            "arena": "models",
+            "category": "dataviz",
+            "elo": 1216,
+            "win_rate": 56.1,
+            "rank": 48
+          },
+          {
+            "arena": "models",
+            "category": "gamedev",
+            "elo": 1219,
+            "win_rate": 56,
+            "rank": 44
+          },
+          {
+            "arena": "models",
+            "category": "uicomponent",
+            "elo": 1206,
+            "win_rate": 51.3,
+            "rank": 51
+          },
+          {
+            "arena": "models",
+            "category": "asciiart",
+            "elo": 1171,
+            "win_rate": 50.7,
+            "rank": 34
+          },
+          {
+            "arena": "models",
+            "category": "svg",
+            "elo": 1162,
+            "win_rate": 53.7,
+            "rank": 45
+          }
+        ]
+      },
+      "reasoning": {
+        "mandatory": false,
+        "supported_efforts": [
+          "xhigh",
+          "high",
+          "medium",
+          "low",
+          "none"
+        ],
+        "default_effort": "medium"
+      }
+    },
+    {
+      "id": "moonshotai/kimi-k2-thinking",
+      "canonical_slug": "moonshotai/kimi-k2-thinking-20251106",
+      "hugging_face_id": "moonshotai/Kimi-K2-Thinking",
+      "name": "MoonshotAI: Kimi K2 Thinking",
+      "created": 1762440622,
+      "description": "Kimi K2 Thinking is Moonshot AI’s most advanced open reasoning model to date, extending the K2 series into agentic, long-horizon reasoning. Built on the trillion-parameter Mixture-of-Experts (MoE) architecture introduced in...",
+      "context_length": 262144,
+      "architecture": {
+        "modality": "text->text",
+        "input_modalities": [
+          "text"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Other",
+        "instruct_type": null
+      },
+      "pricing": {
+        "prompt": "0.0000006",
+        "completion": "0.0000025",
+        "input_cache_read": "0.00000015"
+      },
+      "top_provider": {
+        "context_length": 262144,
+        "max_completion_tokens": 98304,
+        "is_moderated": false
+      },
+      "per_request_limits": null,
+      "supported_parameters": [
+        "frequency_penalty",
+        "include_reasoning",
+        "logprobs",
+        "max_tokens",
+        "presence_penalty",
+        "reasoning",
+        "repetition_penalty",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_k",
+        "top_logprobs",
+        "top_p"
+      ],
+      "default_parameters": {
+        "temperature": null,
+        "top_p": null,
+        "top_k": null,
+        "frequency_penalty": null,
+        "presence_penalty": null,
+        "repetition_penalty": null
+      },
+      "supported_voices": null,
+      "knowledge_cutoff": null,
+      "expiration_date": null,
+      "links": {
+        "details": "/api/v1/models/moonshotai/kimi-k2-thinking-20251106/endpoints"
+      },
+      "benchmarks": {
+        "design_arena": [
+          {
+            "arena": "models",
+            "category": "website",
+            "elo": 1125,
+            "win_rate": 48.8,
+            "rank": 91
+          }
+        ],
+        "artificial_analysis": {
+          "intelligence_index": null,
+          "coding_index": 21,
+          "agentic_index": null
+        }
+      },
+      "reasoning": {
+        "mandatory": true,
+        "default_enabled": true
+      }
+    },
+    {
+      "id": "anthropic/claude-3-haiku",
+      "canonical_slug": "anthropic/claude-3-haiku",
+      "hugging_face_id": null,
+      "name": "Anthropic: Claude 3 Haiku",
+      "created": 1710288000,
+      "description": "Claude 3 Haiku is Anthropic's fastest and most compact model for\nnear-instant responsiveness. Quick and accurate targeted performance.\n\nSee the launch announcement and benchmark results [here](https://www.anthropic.com/news/claude-3-haiku)\n\n#multimodal",
+      "context_length": 200000,
+      "architecture": {
+        "modality": "text+image->text",
+        "input_modalities": [
+          "text",
+          "image"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "Claude",
+        "instruct_type": null
+      },
+      "pricing": {
+        "prompt": "0.00000025",
+        "completion": "0.00000125",
+        "web_search": "0.01",
+        "input_cache_read": "0.00000003",
+        "input_cache_write": "0.0000003",
+        "input_cache_write_1h": "0.0000005"
+      },
+      "top_provider": {
+        "context_length": 200000,
+        "max_completion_tokens": 4096,
+        "is_moderated": true
+      },
+      "per_request_limits": null,
+      "supported_parameters": [
+        "max_tokens",
+        "stop",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_k",
+        "top_p"
+      ],
+      "default_parameters": {},
+      "supported_voices": null,
+      "knowledge_cutoff": "2023-08-31",
+      "expiration_date": null,
+      "links": {
+        "details": "/api/v1/models/anthropic/claude-3-haiku/endpoints"
+      }
+    },
+    {
+      "id": "openai/gpt-5-nano",
+      "canonical_slug": "openai/gpt-5-nano-2025-08-07",
+      "hugging_face_id": "",
+      "name": "OpenAI: GPT-5 Nano",
+      "created": 1754587402,
+      "description": "GPT-5-Nano is the smallest and fastest variant in the GPT-5 system, optimized for developer tools, rapid interactions, and ultra-low latency environments. While limited in reasoning depth compared to its larger...",
+      "context_length": 400000,
+      "architecture": {
+        "modality": "text+image+file->text",
+        "input_modalities": [
+          "text",
+          "image",
+          "file"
+        ],
+        "output_modalities": [
+          "text"
+        ],
+        "tokenizer": "GPT",
+        "instruct_type": null
+      },
+      "pricing": {
+        "prompt": "0.00000005",
+        "completion": "0.0000004",
+        "web_search": "0.01",
+        "input_cache_read": "0.000000005"
+      },
+      "top_provider": {
+        "context_length": 400000,
+        "max_completion_tokens": 128000,
+        "is_moderated": true
+      },
+      "per_request_limits": null,
+      "supported_parameters": [
+        "include_reasoning",
+        "max_completion_tokens",
+        "max_tokens",
+        "reasoning",
+        "reasoning_effort",
+        "response_format",
+        "seed",
+        "structured_outputs",
+        "tool_choice",
+        "tools"
+      ],
+      "default_parameters": {
+        "temperature": null,
+        "top_p": null,
+        "top_k": null,
+        "frequency_penalty": null,
+        "presence_penalty": null,
+        "repetition_penalty": null
+      },
+      "supported_voices": null,
+      "knowledge_cutoff": "2024-05-31",
+      "expiration_date": null,
+      "links": {
+        "details": "/api/v1/models/openai/gpt-5-nano-2025-08-07/endpoints"
+      },
+      "benchmarks": {
+        "design_arena": [
+          {
+            "arena": "models",
+            "category": "3d",
+            "elo": 994,
+            "win_rate": 36.3,
+            "rank": 106
+          },
+          {
+            "arena": "models",
+            "category": "codecategories",
+            "elo": 1098,
+            "win_rate": 48,
+            "rank": 94
+          },
+          {
+            "arena": "models",
+            "category": "dataviz",
+            "elo": 1071,
+            "win_rate": 46.2,
+            "rank": 98
+          },
+          {
+            "arena": "models",
+            "category": "gamedev",
+            "elo": 1068,
+            "win_rate": 46.5,
+            "rank": 96
+          },
+          {
+            "arena": "models",
+            "category": "uicomponent",
+            "elo": 1082,
+            "win_rate": 51.9,
+            "rank": 92
+          },
+          {
+            "arena": "models",
+            "category": "website",
+            "elo": 1114,
+            "win_rate": 48.9,
+            "rank": 94
+          }
+        ]
+      },
+      "reasoning": {
+        "mandatory": true,
+        "supported_efforts": [
+          "high",
+          "medium",
+          "low",
+          "minimal"
+        ],
+        "default_effort": "medium"
+      }
+    }
+  ]
+}
