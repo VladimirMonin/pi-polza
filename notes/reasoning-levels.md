@@ -136,4 +136,4 @@ Key conclusions:
    thinking budgets — that requires per-family live confirmation first.
 
 Probe: `npm run probe:reasoning [-- --models=... --max-tokens=... --prompt="..."]`.
-Spend for the whole reasoning investigation: ≈ 1.4 ₽.
+Spend for the whole reasoning investigation: ≈ 0.85 ₽ measured.
