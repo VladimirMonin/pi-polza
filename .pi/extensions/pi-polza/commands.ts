@@ -8,6 +8,7 @@ import { summarizeRecords, type PolzaUsageRecord } from "./accounting.ts";
 import { formatRub, type PolzaBalance } from "./balance.ts";
 import { extractInternalCapabilities } from "./mapper.ts";
 import type { PolzaStatusController } from "./status.ts";
+import { describeReasoning, reasoningVerificationFor } from "./reasoning.ts";
 import type { Provenanced } from "./metadata/provenance.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
 
@@ -66,6 +67,7 @@ function modelInfoLines(model: ResolvedModel): string[] {
     `Tool choice:  ${yesNoUnknown(caps.toolChoice)} (source: ${model.capabilities.toolChoice.source})`,
     `Reasoning:    declared: ${yesNoUnknown(model.capabilities.reasoning.value)} (source: ${model.capabilities.reasoning.source})`,
     `Reasoning eff:${yesNoUnknown(model.capabilities.reasoningEffort.value)} (source: ${model.capabilities.reasoningEffort.source})`,
+    ...describeReasoning(reasoningVerificationFor(model.id)).map((line) => `              ${line}`),
     `Structured:   ${yesNoUnknown(caps.structuredOutputs)} (source: ${model.capabilities.structuredOutputs.source})`,
     "",
     "Pricing (native RUB, source: Polza catalog — reference estimate):",

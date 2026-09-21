@@ -16,6 +16,26 @@ import { tapResponseForUsage } from "./tap.ts";
 
 export type PolzaUsageSink = (record: PolzaUsageRecord) => void;
 
+const REASONING_KEY = /reasoning|thinking|thinkingLevel|enable_thinking|chat_template/i;
+
+/**
+ * Opt-in dev aid: with POLZA_DEBUG_PAYLOAD=1, print only the reasoning-related request keys so we
+ * can confirm exactly what Pi's transport sends. Never logs prompts, headers or credentials.
+ */
+function debugReasoningPayload(body: unknown): void {
+  if (process.env.POLZA_DEBUG_PAYLOAD !== "1" || typeof body !== "string") return;
+  try {
+    const parsed = JSON.parse(body) as Record<string, unknown>;
+    const picked: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (REASONING_KEY.test(key)) picked[key] = value;
+    }
+    process.stderr.write(`[polza-payload] ${JSON.stringify(picked)}\n`);
+  } catch {
+    // ignore
+  }
+}
+
 export function createPolzaStreamSimple(onRecord: PolzaUsageSink) {
   // The bundled OpenAI-completions implementation — streaming, reasoning, tool calls, cache all
   // stay exactly as Pi does them.
@@ -29,6 +49,7 @@ export function createPolzaStreamSimple(onRecord: PolzaUsageSink) {
     const baseFetch = options?.fetch ?? globalThis.fetch;
 
     const tappingFetch: typeof globalThis.fetch = async (input, init) => {
+      debugReasoningPayload(init?.body);
       const response = await baseFetch(input, init);
       if (!response.ok) return response;
       try {
