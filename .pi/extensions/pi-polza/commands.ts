@@ -30,31 +30,37 @@ export interface CommandDeps {
 
 /** Render a panel through the active theme (TUI) or as plain text (other modes). */
 async function showPanel(ctx: ExtensionCommandContext, panel: Panel): Promise<void> {
+  const plain = renderPanelPlain(panel).join("\n");
   if (ctx.mode !== "tui") {
-    ctx.ui.notify(renderPanelPlain(panel).join("\n"), "info");
+    ctx.ui.notify(plain, "info");
     return;
   }
 
-  const [{ Container, Text, matchesKey }, { DynamicBorder }] = await Promise.all([
-    import("@earendil-works/pi-tui"),
-    import("@earendil-works/pi-coding-agent"),
-  ]);
+  try {
+    const [{ Container, Text, matchesKey }, { DynamicBorder }] = await Promise.all([
+      import("@earendil-works/pi-tui"),
+      import("@earendil-works/pi-coding-agent"),
+    ]);
 
-  await ctx.ui.custom((_tui, theme, _kb, done) => {
-    const container = new Container();
-    const border = new DynamicBorder((s: string) => theme.fg("accent", s));
-    container.addChild(border);
-    for (const line of renderPanel(theme, panel)) container.addChild(new Text(line, 1, 0));
-    container.addChild(new Text(theme.fg("dim", "Press Enter or Esc to close"), 1, 0));
-    container.addChild(border);
-    return {
-      render: (width: number) => container.render(width),
-      invalidate: () => container.invalidate(),
-      handleInput: (data: string) => {
-        if (matchesKey(data, "enter") || matchesKey(data, "escape") || data === "q") done(undefined);
-      },
-    };
-  });
+    await ctx.ui.custom((_tui, theme, _kb, done) => {
+      const container = new Container();
+      const border = new DynamicBorder((s: string) => theme.fg("accent", s));
+      container.addChild(border);
+      for (const line of renderPanel(theme, panel)) container.addChild(new Text(line, 1, 0));
+      container.addChild(new Text(theme.fg("dim", "Press Enter or Esc to close"), 1, 0));
+      container.addChild(border);
+      return {
+        render: (width: number) => container.render(width),
+        invalidate: () => container.invalidate(),
+        handleInput: (data: string) => {
+          if (matchesKey(data, "enter") || matchesKey(data, "escape") || data === "q") done(undefined);
+        },
+      };
+    });
+  } catch {
+    // If the native TUI components are unavailable, degrade to a plain notification.
+    ctx.ui.notify(plain, "info");
+  }
 }
 
 export function registerPolzaCommands(pi: ExtensionAPI, deps: CommandDeps): void {
