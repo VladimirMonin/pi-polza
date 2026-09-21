@@ -18,6 +18,7 @@ import {
   writeOpenRouterCache,
 } from "./metadata/openrouter-cache.ts";
 import { resolveModels } from "./metadata/resolver.ts";
+import { buildOverrideMap } from "./overrides/models.ts";
 import { toProviderModelConfigs } from "./mapper.ts";
 import { VERIFIED_TOOL_SUPPORT } from "./verified.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
@@ -100,6 +101,7 @@ export async function buildPolzaCatalog(options: BuildOptions = {}): Promise<Cat
 
   const resolved = resolveModels(polzaModels, indexOpenRouterById(openRouterModels), {
     verifiedToolSupportById: VERIFIED_TOOL_SUPPORT,
+    overridesById: buildOverrideMap(),
   });
   const models = toProviderModelConfigs(resolved);
 

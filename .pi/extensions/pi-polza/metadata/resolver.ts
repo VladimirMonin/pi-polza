@@ -28,6 +28,8 @@ export interface ResolveOverrides {
 export interface ResolveOptions {
   /** Surgical verified overrides — highest priority, per field. */
   overrides?: ResolveOverrides;
+  /** Per-model overrides; takes precedence over `overrides` in `resolveModels`. */
+  overridesById?: Map<string, ResolveOverrides>;
   /** Set to `true` only after a real tool loop through Polza succeeded (applied to all models). */
   verifiedToolSupport?: boolean | "unknown";
   /** Per-model-id verified tool support; takes precedence over `verifiedToolSupport`. */
@@ -165,5 +167,10 @@ export function resolveModels(
   openRouterById: Map<string, OpenRouterModel>,
   options: ResolveOptions = {},
 ): ResolvedModel[] {
-  return polzaModels.map((model) => resolveModel(model, openRouterById.get(model.id) ?? null, options));
+  return polzaModels.map((model) =>
+    resolveModel(model, openRouterById.get(model.id) ?? null, {
+      ...options,
+      overrides: options.overridesById?.get(model.id) ?? options.overrides,
+    }),
+  );
 }

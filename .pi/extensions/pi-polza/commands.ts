@@ -9,6 +9,7 @@ import { formatRub, type PolzaBalance } from "./balance.ts";
 import { extractInternalCapabilities } from "./mapper.ts";
 import type { PolzaStatusController } from "./status.ts";
 import { describeReasoning, reasoningVerificationFor } from "./reasoning.ts";
+import { overridesFor } from "./overrides/models.ts";
 import type { Provenanced } from "./metadata/provenance.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
 
@@ -88,6 +89,15 @@ function modelInfoLines(model: ResolvedModel): string[] {
   }
 
   if (model.openRouterId) lines.push(`OpenRouter id: ${model.openRouterId}`);
+
+  const appliedOverrides = overridesFor(model.id);
+  if (appliedOverrides.length > 0) {
+    lines.push("", `Verified overrides applied: ${appliedOverrides.length}`);
+    for (const override of appliedOverrides) {
+      lines.push(`  ${override.field} = ${JSON.stringify(override.value)}  (${override.source}, ${override.verifiedAt})`);
+      lines.push(`    reason: ${override.reason}`);
+    }
+  }
   return lines;
 }
 
