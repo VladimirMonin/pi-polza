@@ -1,6 +1,6 @@
 {
   "name": "pi-polza",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": false,
   "type": "module",
   "description": "Polza AI as a native dynamic model provider for Pi Agent: auto-loaded catalog, capabilities, OpenRouter enrichment and actual RUB billing.",

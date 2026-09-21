@@ -10,6 +10,8 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-21
+
 ### Добавлено
 
 - **Учёт расходов подагентов.** Запросы foreground-подагентов попадают в основную сессию как и
@@ -106,6 +108,7 @@
 - `npm run audit:secrets` проверяет рабочее дерево, историю Git, workspace и сессии на утечки;
   перед релизом — PASS.
 
-[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.2.0
 [0.1.1]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.1.1
 [0.1.0]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.1.0
