@@ -13,10 +13,14 @@ image/video/STT/TTS/embeddings, routing, subagents, dashboard, публикац�
 ## Что уже есть
 
 - `docs/pi_polza_provider_architecture.md` — исходная архитектурная идея.
+- `instructions/manual-testing.md` — **как готовить и проверять установку**: где лежит
+  приёмочная среда `C:\PY\pi-polza-smoke-test`, что делает агент, что проверяет человек,
+  известные ловушки и стоп-критерии. Читать перед любой проверкой установки.
 - `notes/` — инженерные заметки и результаты живых экспериментов.
 - `scripts/` — независимые диагностические probe-скрипты (ходят в Polza напрямую).
-- `src/` — переиспользуемые модули (env, catalog, mapper, usage, balance).
-- `.pi/extensions/pi-polza/` — сам Pi extension.
+- `tests/`, `tests-live/` — юнит-тесты (офлайн) и живая проверка (требует ключ и тратит деньги).
+- `.pi/extensions/pi-polza/` — сам Pi extension; содержит и рантайм-код, и
+  переиспользуемые модули (env, catalog, mapper, usage, balance). Отдельной `src/` нет.
 
 ## Требования
 
