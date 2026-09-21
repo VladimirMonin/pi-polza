@@ -46,7 +46,7 @@ pi install https://github.com/VladimirMonin/pi-polza
 Если предпочитаете зафиксировать релиз:
 
 ```bash
-pi install https://github.com/VladimirMonin/pi-polza@v0.1.0
+pi install https://github.com/VladimirMonin/pi-polza@v0.2.0
 ```
 
 Проверить установку:
