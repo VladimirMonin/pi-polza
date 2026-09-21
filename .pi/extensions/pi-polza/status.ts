@@ -1,8 +1,8 @@
 /**
  * Persistent Polza footer/status bar (framework-agnostic core).
  *
- * Renders `Polza <balance> ₽ | Session <cost> ₽` via Pi's native `ctx.ui.setStatus`.
- * Balance comes from `/api/v2/balance`; Session is the sum of authoritative `usage.cost_rub`.
+ * Renders `Polza <balance> ₽ | Spent <cost> ₽` via Pi's native `ctx.ui.setStatus`.
+ * Balance comes from `/api/v2/balance`; Spent is the sum of authoritative `usage.cost_rub`.
  * The two are independent: a failing balance endpoint never hides the session cost.
  */
 import type { Theme } from "@earendil-works/pi-coding-agent";
@@ -30,6 +30,8 @@ export interface SessionCost {
   requests: number;
   /** Sum of `usage.cost_rub`; null when records exist but none carried a cost. */
   costRub: number | null;
+  /** Requests whose cost is unknown; > 0 makes the footer mark the subtotal as partial. */
+  unpricedRequests?: number;
 }
 
 /** Compact RUB: 2 decimals for normal amounts, more precision only when the amount is tiny. */
@@ -52,7 +54,7 @@ function sessionCell(session: SessionCost): string {
   return formatRubCompact(session.costRub);
 }
 
-/** `Polza 43.54 ₽ | Session 0.61 ₽` (or `Polza ? ₽ | Session 0.61 ₽` on balance failure). */
+/** `Polza 43.54 ₽ | Spent 0.61 ₽` (or `Polza ? ₽ | Spent 0.61 ₽` on balance failure). */
 export function formatBalanceStatus(balance: BalanceSnapshot, session: SessionCost): string {
   return renderPolzaStatus(PLAIN_STATUS_THEME, polzaStatusModel(balance, session));
 }
@@ -62,10 +64,17 @@ export interface PolzaStatusModel {
   balance: string;
   session: string;
   balanceState: BalanceState;
+  /** True when some requests had no authoritative cost, so the spend is a partial subtotal. */
+  partial: boolean;
 }
 
 export function polzaStatusModel(balance: BalanceSnapshot, session: SessionCost): PolzaStatusModel {
-  return { balance: balanceCell(balance), session: sessionCell(session), balanceState: balance.state };
+  return {
+    balance: balanceCell(balance),
+    session: sessionCell(session),
+    balanceState: balance.state,
+    partial: (session.unpricedRequests ?? 0) > 0,
+  };
 }
 
 /** No-op theme used for plain-text output (tests, non-TUI fallback). */
@@ -77,6 +86,7 @@ export const PLAIN_STATUS_THEME: StatusTheme = {
 /**
  * Calm, low-noise styling: labels are muted, the separator is dim, values are normal text.
  * An unavailable balance is the only thing that draws attention (warning), and never the whole line.
+ * The `partial` marker is deliberately faint: it qualifies the number without competing with it.
  */
 export function renderPolzaStatus(theme: StatusTheme, model: PolzaStatusModel): string {
   const balanceValue =
@@ -86,9 +96,10 @@ export function renderPolzaStatus(theme: StatusTheme, model: PolzaStatusModel): 
     " ",
     balanceValue,
     theme.fg("dim", " | "),
-    theme.fg("muted", "Session"),
+    theme.fg("muted", "Spent"),
     " ",
     theme.fg("text", model.session),
+    ...(model.partial ? [" ", theme.fg("dim", "partial")] : []),
   ].join("");
 }
 

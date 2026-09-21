@@ -248,12 +248,53 @@ export function balancePanel(balance: PolzaBalance): Panel {
   };
 }
 
-/** `/polza-cost` — actual session cost from usage.cost_rub is the headline value. */
+/** One background-subagent row: agent identity + model, as far as the runtime reported them. */
+interface BackgroundGroup {
+  agent: string;
+  modelId: string;
+  requests: number;
+  costRub: number | null;
+}
+
+/**
+ * Background spend is labelled only with an agent the runtime actually reported. A record without
+ * `agentId` must not be folded into the root session (which would claim the main agent paid it), so
+ * it is shown as unattributed instead.
+ */
+const UNATTRIBUTED_AGENT = "Unattributed Polza";
+
+function isBackgroundRecord(record: PolzaUsageRecord): boolean {
+  return record.origin === "background-subagent";
+}
+
+/** Foreign providers never enter the RUB total and are never rendered as `0 ₽`. */
+function isForeignProvider(record: PolzaUsageRecord): boolean {
+  return (record.provider as string) !== "polza";
+}
+
+/**
+ * `/polza-cost` — Polza-only totals, split into the root session, background children and coverage.
+ *
+ * The report deliberately does not guess foreground per-agent attribution: those requests are
+ * captured into the root session without any agent identity, so they are reported together.
+ */
 export function costPanel(records: readonly PolzaUsageRecord[]): Panel {
-  const summary = summarizeRecords(records);
-  if (summary.requests === 0) {
-    return { title: "Polza — Current Session", sections: [{ rows: [{ label: "Cost", value: "no usage recorded yet", role: "dim" }] }] };
+  if (records.length === 0) {
+    return {
+      title: "Polza — Current Session",
+      sections: [{ rows: [{ label: "Cost", value: "no usage recorded yet", role: "dim" }] }],
+    };
   }
+
+  const foreign = records.filter(isForeignProvider);
+  const polza = records.filter((record) => !isForeignProvider(record));
+  const background = polza.filter(isBackgroundRecord);
+  // Everything not imported from a background child is main + foreground subagent spend. The runtime
+  // does not attribute those per agent, so keeping them together is honest; splitting them would be a guess.
+  const root = polza.filter((record) => !isBackgroundRecord(record));
+
+  const summary = summarizeRecords(polza);
+  const rootSummary = summarizeRecords(root);
 
   const sections: PanelSection[] = [
     {
@@ -263,19 +304,53 @@ export function costPanel(records: readonly PolzaUsageRecord[]): Panel {
       ],
     },
     {
-      title: "Tokens",
+      title: "Root session",
       rows: [
-        { label: "Input", value: summary.promptTokens.toLocaleString("en-US") },
-        { label: "Cache read", value: summary.cachedTokens.toLocaleString("en-US") },
-        { label: "Cache write", value: summary.cacheWriteTokens.toLocaleString("en-US") },
-        { label: "Output", value: summary.completionTokens.toLocaleString("en-US") },
-        { label: "Reasoning", value: summary.reasoningTokens.toLocaleString("en-US") },
+        { label: "Cost", value: rubOrUnknown(rootSummary.actualCostRub) },
+        { label: "Requests", value: String(rootSummary.requests) },
       ],
+      note: "includes main + foreground subagents",
     },
   ];
 
+  if (background.length > 0) {
+    const groups = new Map<string, BackgroundGroup>();
+    for (const record of background) {
+      // Group by the reported agent, falling back to the run identity so two runs are never merged.
+      // A record with neither is shown as unattributed rather than blamed on the main agent.
+      const identity = record.agentId ?? record.runId ?? "unknown";
+      const agent = record.agentId ?? UNATTRIBUTED_AGENT;
+      const key = `${identity}\u0000${record.modelId}`;
+      const group = groups.get(key) ?? { agent, modelId: record.modelId, requests: 0, costRub: null };
+      group.requests += 1;
+      if (record.costRub !== null) group.costRub = (group.costRub ?? 0) + record.costRub;
+      groups.set(key, group);
+    }
+    sections.push({
+      title: "Background subagents",
+      rows: [...groups.values()]
+        .sort((a, b) => (b.costRub ?? 0) - (a.costRub ?? 0) || a.agent.localeCompare(b.agent))
+        .map((group) => ({
+          label: group.agent,
+          value: rubOrUnknown(group.costRub),
+          role: "value" as ValueRole,
+          hint: `${group.modelId} · ${group.requests} req`,
+        })),
+    });
+  }
+
+  sections.push({
+    title: "Tokens",
+    rows: [
+      { label: "Input", value: summary.promptTokens.toLocaleString("en-US") },
+      { label: "Cache read", value: summary.cachedTokens.toLocaleString("en-US") },
+      { label: "Cache write", value: summary.cacheWriteTokens.toLocaleString("en-US") },
+      { label: "Output", value: summary.completionTokens.toLocaleString("en-US") },
+      { label: "Reasoning", value: summary.reasoningTokens.toLocaleString("en-US") },
+    ],
+  });
+
   if (summary.models.length > 0) {
-    const total = summary.actualCostRub;
     sections.push({
       title: "Models",
       rows: summary.models.map((entry) => ({
@@ -284,13 +359,43 @@ export function costPanel(records: readonly PolzaUsageRecord[]): Panel {
         role: "value" as ValueRole,
         hint: `${entry.requests} req`,
       })),
-      note: total === null ? "Some requests reported no cost_rub — their cost is unknown, not estimated." : undefined,
+      note:
+        summary.actualCostRub === null
+          ? "Some requests reported no cost_rub — their cost is unknown, not estimated."
+          : undefined,
+    });
+  }
+
+  const partial = summary.unpricedRequests > 0;
+  sections.push({
+    title: "Coverage",
+    rows: [
+      {
+        label: "Requests",
+        value: `${summary.pricedRequests} priced requests; ${summary.unpricedRequests} unpriced`,
+        role: partial ? "warning" : "value",
+      },
+      {
+        label: "Completeness",
+        value: partial ? "partial" : "complete",
+        role: partial ? "warning" : "success",
+      },
+    ],
+    note: partial ? "Some requests carry no authoritative cost_rub; the subtotal above is partial." : undefined,
+  });
+
+  if (foreign.length > 0) {
+    sections.push({
+      title: "Not included",
+      rows: [{ label: "Other providers", value: "excluded from pi-polza accounting", role: "muted" }],
+      note: "Foreign spend is never priced in RUB and never reported as 0 ₽.",
     });
   }
 
   return {
     title: "Polza — Current Session",
     sections,
-    footer: "Actual cost comes from usage.cost_rub (native RUB).",
+    footer:
+      "Actual cost comes from usage.cost_rub (native RUB). Foreground per-agent attribution unavailable.",
   };
 }

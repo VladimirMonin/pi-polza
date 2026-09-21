@@ -55,11 +55,29 @@ test("formatRubCompact adapts precision to magnitude", () => {
 });
 
 test("formatBalanceStatus covers fresh, stale, unavailable and empty session", () => {
-  assert.equal(formatBalanceStatus(snap(43.54, "fresh"), { requests: 8, costRub: 0.611 }), "Polza 43.54 ₽ | Session 0.61 ₽");
-  assert.equal(formatBalanceStatus(snap(43.54, "stale"), { requests: 1, costRub: 0.5 }), "Polza 43.54 ₽ | Session 0.50 ₽");
-  assert.equal(formatBalanceStatus(snap(null, "unavailable"), { requests: 1, costRub: 0.5 }), "Polza ? | Session 0.50 ₽");
-  assert.equal(formatBalanceStatus(snap(null, "unavailable"), { requests: 0, costRub: null }), "Polza ? | Session 0.00 ₽");
-  assert.equal(formatBalanceStatus(snap(10, "fresh"), { requests: 2, costRub: null }), "Polza 10.00 ₽ | Session ?");
+  assert.equal(formatBalanceStatus(snap(43.54, "fresh"), { requests: 8, costRub: 0.611 }), "Polza 43.54 ₽ | Spent 0.61 ₽");
+  assert.equal(formatBalanceStatus(snap(43.54, "stale"), { requests: 1, costRub: 0.5 }), "Polza 43.54 ₽ | Spent 0.50 ₽");
+  assert.equal(formatBalanceStatus(snap(null, "unavailable"), { requests: 1, costRub: 0.5 }), "Polza ? | Spent 0.50 ₽");
+  assert.equal(formatBalanceStatus(snap(null, "unavailable"), { requests: 0, costRub: null }), "Polza ? | Spent 0.00 ₽");
+  assert.equal(formatBalanceStatus(snap(10, "fresh"), { requests: 2, costRub: null }), "Polza 10.00 ₽ | Spent ?");
+});
+
+test("footer labels the amount as Spent, never as the whole session", () => {
+  const text = formatBalanceStatus(snap(43.54, "fresh"), { requests: 1, costRub: 0.61 });
+  assert.match(text, /Spent 0\.61 ₽/);
+  assert.doesNotMatch(text, /Session/);
+});
+
+test("footer marks a partial subtotal only when some requests carried no cost", () => {
+  const partial = formatBalanceStatus(snap(43.54, "fresh"), { requests: 3, costRub: 0.61, unpricedRequests: 1 });
+  assert.match(partial, /Spent 0\.61 ₽ partial/);
+
+  const complete = formatBalanceStatus(snap(43.54, "fresh"), { requests: 3, costRub: 0.61, unpricedRequests: 0 });
+  assert.doesNotMatch(complete, /partial/);
+
+  // Absent count means "not reported", which must not be silently treated as incomplete.
+  const unspecified = formatBalanceStatus(snap(43.54, "fresh"), { requests: 3, costRub: 0.61 });
+  assert.doesNotMatch(unspecified, /partial/);
 });
 
 function makeController(overrides: Partial<Parameters<typeof buildController>[0]> = {}) {
@@ -91,9 +109,9 @@ function buildController(opts: { available?: number; fail?: boolean; session?: {
 test("controller renders '?' first, then fresh balance after activation fetch", async () => {
   const h = makeController();
   h.controller.activate();
-  assert.equal(h.last(), "Polza ? | Session 0.61 ₽");
+  assert.equal(h.last(), "Polza ? | Spent 0.61 ₽");
   await tick();
-  assert.equal(h.last(), "Polza 43.50 ₽ | Session 0.61 ₽");
+  assert.equal(h.last(), "Polza 43.50 ₽ | Spent 0.61 ₽");
   assert.equal(h.controller.snapshot.state, "fresh");
 });
 
@@ -101,7 +119,7 @@ test("balance failure keeps the session cost and shows unknown balance", async (
   const h = buildController({ fail: true });
   h.controller.activate();
   await tick();
-  assert.equal(h.last(), "Polza ? | Session 0.61 ₽");
+  assert.equal(h.last(), "Polza ? | Spent 0.61 ₽");
   assert.equal(h.controller.snapshot.state, "unavailable");
 });
 
@@ -120,13 +138,13 @@ test("a known balance that later fails is shown as stale, not lost", async () =>
   });
   controller.activate();
   await tick();
-  assert.equal(statuses[statuses.length - 1], "Polza 43.50 ₽ | Session 0.61 ₽");
+  assert.equal(statuses[statuses.length - 1], "Polza 43.50 ₽ | Spent 0.61 ₽");
 
   failing = true;
   now += BALANCE_TTL_MS + 1;
   await controller.refreshBalance();
   assert.equal(controller.snapshot.state, "stale");
-  assert.equal(statuses[statuses.length - 1], "Polza 43.50 ₽ | Session 0.61 ₽");
+  assert.equal(statuses[statuses.length - 1], "Polza 43.50 ₽ | Spent 0.61 ₽");
 });
 
 test("requestCompleted refreshes only when the TTL expired", async () => {
@@ -161,6 +179,26 @@ test("requestCompleted refreshes only when the TTL expired", async () => {
   assert.equal(fetches, 2, "refresh after TTL");
 });
 
+test("requestCompleted re-renders a partial subtotal without waiting for the TTL", async () => {
+  const statuses: Array<string | undefined> = [];
+  let unpriced = 0;
+  let now = 1_000_000;
+  const controller = new PolzaStatusController({
+    setStatus: pushPlain(statuses),
+    fetchBalance: async () => balance(43.5),
+    getSessionCost: () => ({ requests: 2, costRub: 0.61, unpricedRequests: unpriced }),
+    now: () => now,
+  });
+  controller.activate();
+  await tick();
+  assert.equal(statuses[statuses.length - 1], "Polza 43.50 ₽ | Spent 0.61 ₽");
+
+  unpriced = 1;
+  now += 5_000; // still inside the balance TTL: no refetch, but the marker must appear
+  controller.requestCompleted();
+  assert.equal(statuses[statuses.length - 1], "Polza 43.50 ₽ | Spent 0.61 ₽ partial");
+});
+
 test("deactivate clears the status and stops refreshes", () => {
   const h = makeController();
   h.controller.activate();
@@ -178,11 +216,19 @@ test("renderPolzaStatus uses muted labels, a dim separator, normal values and wa
   assert.ok(ok.calls.some((c) => c.color === "muted" && c.text === "Polza"));
   assert.ok(ok.calls.some((c) => c.color === "dim" && c.text === " | "));
   assert.ok(ok.calls.some((c) => c.color === "text" && c.text === "43.54 ₽"));
-  assert.ok(ok.calls.some((c) => c.color === "muted" && c.text === "Session"));
+  assert.ok(ok.calls.some((c) => c.color === "muted" && c.text === "Spent"));
   assert.ok(ok.calls.some((c) => c.color === "text" && c.text === "0.61 ₽"));
   assert.equal(ok.calls.some((c) => c.color === "warning"), false);
+  assert.equal(ok.calls.some((c) => c.text === "partial"), false, "complete spend carries no marker");
 
   const failed = recordingTheme();
   renderPolzaStatus(failed.theme, polzaStatusModel(snap(null, "unavailable"), { requests: 0, costRub: null }));
   assert.ok(failed.calls.some((c) => c.color === "warning" && c.text === "?"));
+});
+
+test("renderPolzaStatus marks a partial subtotal faintly, not as a warning", () => {
+  const { theme, calls } = recordingTheme();
+  renderPolzaStatus(theme, polzaStatusModel(snap(43.54, "fresh"), { requests: 2, costRub: 0.61, unpricedRequests: 1 }));
+  assert.ok(calls.some((c) => c.color === "dim" && c.text === "partial"));
+  assert.equal(calls.some((c) => c.color === "warning" && c.text === "partial"), false);
 });

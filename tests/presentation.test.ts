@@ -14,6 +14,7 @@ import {
   type ThemeLike,
 } from "../.pi/extensions/pi-polza/presentation.ts";
 import { openRouterModel, polzaModel } from "./fixtures.ts";
+import { formatRub } from "../.pi/extensions/pi-polza/balance.ts";
 
 /** Theme stub that records which semantic role each fragment was rendered with. */
 function recordingTheme(): { theme: ThemeLike; calls: Array<{ color: string; text: string }> } {
@@ -105,4 +106,101 @@ test("balancePanel makes the available balance the accent headline", () => {
   assert.ok(calls.some((c) => c.color === "accent"), "some value is accent");
   assert.ok(has(calls, "muted", "Reserved"));
   assert.ok(has(calls, "muted", "Lifetime spent"));
+});
+
+const plainText = (records: Parameters<typeof costPanel>[0]): string =>
+  renderPanel({ fg: (_c, t) => t, bold: (t) => t }, costPanel(records)).join("\n");
+
+/** A background record as the completion importer produces it. */
+function backgroundRecord(options: {
+  modelId: string;
+  costRub: number;
+  agentId?: string;
+  runId?: string;
+}): ReturnType<typeof recordFromUsage> {
+  const record = recordFromUsage(
+    options.modelId,
+    { prompt_tokens: 100, completion_tokens: 10, cost_rub: options.costRub },
+    1,
+  );
+  record.origin = "background-subagent";
+  if (options.agentId !== undefined) record.agentId = options.agentId;
+  if (options.runId !== undefined) record.runId = options.runId;
+  return record;
+}
+
+test("costPanel separates the root session from imported background spend", () => {
+  const records = [
+    recordFromUsage("qwen/qwen3.5-9b", { prompt_tokens: 10, completion_tokens: 1, cost_rub: 0.18 }, 1),
+    backgroundRecord({ modelId: "openai/gpt-oss-20b", costRub: 0.074, agentId: "worker" }),
+  ];
+  const text = plainText(records);
+  assert.match(text, /Root session/);
+  assert.match(text, /includes main \+ foreground subagents/);
+  assert.match(text, /Background subagents/);
+  assert.match(text, /worker/);
+  // The root row must not absorb the imported child spend.
+  assert.match(text, new RegExp(`Root session[\\s\\S]*${formatRub(0.18)}`));
+});
+
+test("costPanel groups background spend by agent and keeps two agents apart", () => {
+  const records = [
+    backgroundRecord({ modelId: "openai/gpt-oss-20b", costRub: 0.01, agentId: "scout" }),
+    backgroundRecord({ modelId: "openai/gpt-oss-20b", costRub: 0.02, agentId: "scout" }),
+    backgroundRecord({ modelId: "qwen/qwen3.5-9b", costRub: 0.03, agentId: "reviewer" }),
+  ];
+  const text = plainText(records);
+  assert.match(text, new RegExp(`scout[\\s\\S]*${formatRub(0.03)}`));
+  assert.match(text, new RegExp(`reviewer[\\s\\S]*${formatRub(0.03)}`));
+  assert.match(text, /2 req/, "scout's two requests are one row");
+});
+
+test("costPanel labels a background record without agentId as unattributed, never as main", () => {
+  const records = [backgroundRecord({ modelId: "openai/gpt-oss-20b", costRub: 0.02, runId: "run-1" })];
+  const text = plainText(records);
+  assert.match(text, /Unattributed Polza/);
+  assert.doesNotMatch(text, /Main/);
+  // Root session stays empty rather than claiming the child's spend.
+  assert.match(text, /Root session[\s\S]*unknown/);
+});
+
+test("costPanel excludes foreign providers without pricing them at 0", () => {
+  const foreign = recordFromUsage("vendor/model", { prompt_tokens: 5, completion_tokens: 1, cost_rub: 0.5 }, 1);
+  foreign.provider = "anthropic" as never;
+  const text = plainText([foreign]);
+  assert.match(text, /Not included/);
+  assert.match(text, /excluded from pi-polza accounting/);
+  assert.doesNotMatch(text, /0\.00 ₽/, "foreign spend is never shown as zero");});
+
+test("costPanel marks coverage partial when a request carried no cost", () => {
+  const records = [
+    recordFromUsage("qwen/qwen3.5-9b", { prompt_tokens: 10, completion_tokens: 1, cost_rub: 0.01 }, 1),
+    recordFromUsage("qwen/qwen3.5-9b", { prompt_tokens: 10, completion_tokens: 1 }, 2),
+  ];
+  const text = plainText(records);
+  assert.match(text, /1 priced requests; 1 unpriced/);
+  assert.match(text, /partial/);
+});
+
+test("costPanel reports complete coverage when every request is priced", () => {
+  const text = plainText([
+    recordFromUsage("qwen/qwen3.5-9b", { prompt_tokens: 10, completion_tokens: 1, cost_rub: 0.01 }, 1),
+  ]);
+  assert.match(text, /1 priced requests; 0 unpriced/);
+  assert.match(text, /complete/);
+  assert.doesNotMatch(text, /partial/);
+});
+
+test("costPanel states that foreground per-agent attribution is unavailable", () => {
+  const text = plainText([
+    recordFromUsage("qwen/qwen3.5-9b", { prompt_tokens: 10, completion_tokens: 1, cost_rub: 0.01 }, 1),
+  ]);
+  assert.match(text, /foreground per-agent attribution unavailable/i);
+});
+
+test("costPanel empty state is distinct from partial and unavailable", () => {
+  const text = plainText([]);
+  assert.match(text, /no usage recorded yet/);
+  assert.doesNotMatch(text, /partial/);
+  assert.doesNotMatch(text, /Coverage/);
 });

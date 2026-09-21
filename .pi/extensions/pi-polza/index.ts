@@ -37,7 +37,7 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
   const accounting = new PolzaCostAccumulator();
   let activeCtx: ExtensionContext | null = null;
 
-  // Persistent footer: `Polza <balance> ₽ | Session <cost> ₽`, rendered by Pi's native status bar.
+  // Persistent footer: `Polza <balance> ₽ | Spent <cost> ₽`, rendered by Pi's native status bar.
   const status = new PolzaStatusController({
     setStatus: (model: PolzaStatusModel | undefined) => {
       try {
@@ -50,7 +50,7 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
     fetchBalance: (signal) => fetchBalance(signal),
     getSessionCost: () => {
       const summary = accounting.summary();
-      return { requests: summary.requests, costRub: summary.actualCostRub };
+      return { requests: summary.requests, costRub: summary.actualCostRub, unpricedRequests: summary.unpricedRequests };
     },
   });
 
