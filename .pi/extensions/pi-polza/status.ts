@@ -5,7 +5,11 @@
  * Balance comes from `/api/v2/balance`; Session is the sum of authoritative `usage.cost_rub`.
  * The two are independent: a failing balance endpoint never hides the session cost.
  */
+import type { Theme } from "@earendil-works/pi-coding-agent";
 import type { PolzaBalance } from "./balance.ts";
+
+/** Minimal theme surface the footer needs (keeps this module free of TUI internals). */
+export type StatusTheme = Pick<Theme, "fg" | "bold">;
 
 /** Key under which the status text is registered with Pi. */
 export const POLZA_STATUS_KEY = "polza-accounting";
@@ -50,12 +54,47 @@ function sessionCell(session: SessionCost): string {
 
 /** `Polza 43.54 ₽ | Session 0.61 ₽` (or `Polza ? ₽ | Session 0.61 ₽` on balance failure). */
 export function formatBalanceStatus(balance: BalanceSnapshot, session: SessionCost): string {
-  return `Polza ${balanceCell(balance)} | Session ${sessionCell(session)}`;
+  return renderPolzaStatus(PLAIN_STATUS_THEME, polzaStatusModel(balance, session));
+}
+
+/** Structured footer content, so the caller can theme it without parsing a string. */
+export interface PolzaStatusModel {
+  balance: string;
+  session: string;
+  balanceState: BalanceState;
+}
+
+export function polzaStatusModel(balance: BalanceSnapshot, session: SessionCost): PolzaStatusModel {
+  return { balance: balanceCell(balance), session: sessionCell(session), balanceState: balance.state };
+}
+
+/** No-op theme used for plain-text output (tests, non-TUI fallback). */
+export const PLAIN_STATUS_THEME: StatusTheme = {
+  fg: (_color, text) => text,
+  bold: (text) => text,
+};
+
+/**
+ * Calm, low-noise styling: labels are muted, the separator is dim, values are normal text.
+ * An unavailable balance is the only thing that draws attention (warning), and never the whole line.
+ */
+export function renderPolzaStatus(theme: StatusTheme, model: PolzaStatusModel): string {
+  const balanceValue =
+    model.balanceState === "unavailable" ? theme.fg("warning", model.balance) : theme.fg("text", model.balance);
+  return [
+    theme.fg("muted", "Polza"),
+    " ",
+    balanceValue,
+    theme.fg("dim", " | "),
+    theme.fg("muted", "Session"),
+    " ",
+    theme.fg("text", model.session),
+  ].join("");
 }
 
 export interface StatusControllerDeps {
-  /** Called with the new text, or undefined to clear. */
-  setStatus: (text: string | undefined) => void;
+  /** Called with the structured footer model, or undefined to clear. */
+  setStatus: (model: PolzaStatusModel | undefined) => void;
   fetchBalance: (signal?: AbortSignal) => Promise<PolzaBalance>;
   getSessionCost: () => SessionCost;
   ttlMs?: number;
@@ -144,6 +183,6 @@ export class PolzaStatusController {
       this.deps.setStatus(undefined);
       return;
     }
-    this.deps.setStatus(formatBalanceStatus(this.balance, this.deps.getSessionCost()));
+    this.deps.setStatus(polzaStatusModel(this.balance, this.deps.getSessionCost()));
   }
 }

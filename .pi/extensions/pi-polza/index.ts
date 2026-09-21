@@ -19,7 +19,7 @@ import { hasPolzaApiKey, loadDotEnv } from "./env.ts";
 import { POLZA_API_V1, setRuntimePolzaApiKey } from "./http.ts";
 import { buildPolzaCatalog, POLZA_PROVIDER_ID, toPiModels, type CatalogBuildResult, type OpenRouterMode } from "./provider.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
-import { PolzaStatusController, POLZA_STATUS_KEY } from "./status.ts";
+import { PolzaStatusController, POLZA_STATUS_KEY, renderPolzaStatus, type PolzaStatusModel } from "./status.ts";
 import { createPolzaApiStreams } from "./stream.ts";
 
 interface SessionStartContextLike {
@@ -37,9 +37,10 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
 
   // Persistent footer: `Polza <balance> ₽ | Session <cost> ₽`, rendered by Pi's native status bar.
   const status = new PolzaStatusController({
-    setStatus: (text) => {
+    setStatus: (model: PolzaStatusModel | undefined) => {
       try {
-        activeCtx?.ui.setStatus(POLZA_STATUS_KEY, text);
+        const theme = activeCtx?.ui.theme;
+        activeCtx?.ui.setStatus(POLZA_STATUS_KEY, model && theme ? renderPolzaStatus(theme, model) : undefined);
       } catch {
         // Status bar is best-effort; never break the runtime.
       }

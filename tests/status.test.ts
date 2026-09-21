@@ -6,10 +6,15 @@ import { test } from "node:test";
 import type { PolzaBalance } from "../.pi/extensions/pi-polza/balance.ts";
 import {
   BALANCE_TTL_MS,
+  PLAIN_STATUS_THEME,
   PolzaStatusController,
   formatBalanceStatus,
   formatRubCompact,
+  polzaStatusModel,
+  renderPolzaStatus,
   type BalanceSnapshot,
+  type PolzaStatusModel,
+  type StatusTheme,
 } from "../.pi/extensions/pi-polza/status.ts";
 
 function balance(available: number): PolzaBalance {
@@ -21,6 +26,25 @@ function snap(value: number | null, state: BalanceSnapshot["state"], fetchedAt =
 }
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+/** Collect footer output exactly as Pi would render it with no colors. */
+const pushPlain = (statuses: Array<string | undefined>) => (model: PolzaStatusModel | undefined) =>
+  statuses.push(model ? renderPolzaStatus(PLAIN_STATUS_THEME, model) : undefined);
+
+/** Theme stub that records which semantic role each fragment was rendered with. */
+function recordingTheme(): { theme: StatusTheme; calls: Array<{ color: string; text: string }> } {
+  const calls: Array<{ color: string; text: string }> = [];
+  return {
+    calls,
+    theme: {
+      fg: (color, text) => {
+        calls.push({ color, text });
+        return `[${color}]${text}`;
+      },
+      bold: (text) => text,
+    },
+  };
+}
 
 test("formatRubCompact adapts precision to magnitude", () => {
   assert.equal(formatRubCompact(43.5429743), "43.54 ₽");
@@ -46,7 +70,7 @@ function buildController(opts: { available?: number; fail?: boolean; session?: {
   const statuses: Array<string | undefined> = [];
   let now = 1_000_000;
   const controller = new PolzaStatusController({
-    setStatus: (text) => statuses.push(text),
+    setStatus: pushPlain(statuses),
     fetchBalance: async () => {
       if (opts.fail) throw new Error("network down");
       return balance(opts.available ?? 43.5);
@@ -86,7 +110,7 @@ test("a known balance that later fails is shown as stale, not lost", async () =>
   let failing = false;
   let now = 1_000_000;
   const controller = new PolzaStatusController({
-    setStatus: (t) => statuses.push(t),
+    setStatus: pushPlain(statuses),
     fetchBalance: async () => {
       if (failing) throw new Error("down");
       return balance(43.5);
@@ -114,7 +138,7 @@ test("requestCompleted refreshes only when the TTL expired", async () => {
   const statuses: Array<string | undefined> = [];
   let now = 1_000_000;
   const controller = new PolzaStatusController({
-    setStatus: (t) => statuses.push(t),
+    setStatus: pushPlain(statuses),
     fetchBalance: async () => {
       fetches += 1;
       return balance(10);
@@ -146,4 +170,19 @@ test("deactivate clears the status and stops refreshes", () => {
   h.advance(BALANCE_TTL_MS + 1);
   h.controller.requestCompleted();
   assert.equal(h.last(), undefined);
+});
+
+test("renderPolzaStatus uses muted labels, a dim separator, normal values and warns only on failure", () => {
+  const ok = recordingTheme();
+  renderPolzaStatus(ok.theme, polzaStatusModel(snap(43.54, "fresh"), { requests: 1, costRub: 0.61 }));
+  assert.ok(ok.calls.some((c) => c.color === "muted" && c.text === "Polza"));
+  assert.ok(ok.calls.some((c) => c.color === "dim" && c.text === " | "));
+  assert.ok(ok.calls.some((c) => c.color === "text" && c.text === "43.54 ₽"));
+  assert.ok(ok.calls.some((c) => c.color === "muted" && c.text === "Session"));
+  assert.ok(ok.calls.some((c) => c.color === "text" && c.text === "0.61 ₽"));
+  assert.equal(ok.calls.some((c) => c.color === "warning"), false);
+
+  const failed = recordingTheme();
+  renderPolzaStatus(failed.theme, polzaStatusModel(snap(null, "unavailable"), { requests: 0, costRub: null }));
+  assert.ok(failed.calls.some((c) => c.color === "warning" && c.text === "?"));
 });
