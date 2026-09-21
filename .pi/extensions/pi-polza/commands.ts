@@ -14,7 +14,7 @@ import type { ResolvedModel } from "./metadata/types.ts";
 export interface CommandDeps {
   /** Current internal registry (including ineligible models). */
   getRegistry: () => ResolvedModel[];
-  getLastBuildInfo: () => { polzaCount: number; eligible: number; openRouterError: string | null; fetchedAt: number } | null;
+  getLastBuildInfo: () => { polzaCount: number; eligible: number; openRouterError: string | null; openRouterSource: string; fetchedAt: number } | null;
   /** Native RUB usage records captured for the current session. */
   getUsageRecords: () => readonly PolzaUsageRecord[];
   /** Footer controller, used by `/polza-balance` to force a balance refresh. */

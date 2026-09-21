@@ -17,6 +17,7 @@
     "probe:enrichment": "node scripts/probe-enrichment.ts",
     "test": "node --test \"tests/**/*.test.ts\"",
     "probe:ttft": "node scripts/probe-ttft.ts",
-    "probe:persistence": "node scripts/verify-persistence.ts"
+    "probe:persistence": "node scripts/verify-persistence.ts",
+    "probe:startup": "node scripts/probe-startup.ts"
   }
 }

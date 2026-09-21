@@ -101,7 +101,7 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
       // Offline / cache-only startup: never hit the network here.
       return lastBuild?.models ?? [];
     }
-    const build = await buildPolzaCatalog({ allowOpenRouter: true, signal: context.signal });
+    const build = await buildPolzaCatalog({ openRouter: "live", signal: context.signal });
     lastBuild = build;
     registry = build.resolved;
     return build.models;
@@ -110,7 +110,7 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
   let initialModels: ProviderModelConfig[] = [];
   if (hasPolzaApiKey()) {
     try {
-      const build = await buildPolzaCatalog({ allowOpenRouter: true });
+      const build = await buildPolzaCatalog({ openRouter: "cache-first" });
       lastBuild = build;
       registry = build.resolved;
       initialModels = build.models;
@@ -138,6 +138,7 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
             polzaCount: lastBuild.polzaCount,
             eligible: lastBuild.eligible,
             openRouterError: lastBuild.openRouterError,
+            openRouterSource: lastBuild.openRouterSource,
             fetchedAt: lastBuild.fetchedAt,
           }
         : null,

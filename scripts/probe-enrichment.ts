@@ -42,7 +42,7 @@ function printResolved(model: ResolvedModel): void {
 
 async function main(): Promise<void> {
   console.log("Fetching Polza catalog + OpenRouter metadata...");
-  const build = await buildPolzaCatalog({ allowOpenRouter: true });
+  const build = await buildPolzaCatalog({ openRouter: "live" });
   console.log(`OpenRouter source: ${build.openRouterSource}${build.openRouterError ? ` (${build.openRouterError})` : ""}`);
   const polzaModels = build.resolved.map((r) => r.raw.polza);
   const resolved = build.resolved;
