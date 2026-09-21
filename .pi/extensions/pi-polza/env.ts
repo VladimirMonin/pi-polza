@@ -100,7 +100,7 @@ export function getPolzaApiKey(): string {
   const key = process.env.POLZA_API_KEY?.trim();
   if (!key) {
     throw new Error(
-      "POLZA_API_KEY is not set. Add it to the git-ignored .env file or export it in the environment.",
+      "Polza API key is not configured. Run /login polza in Pi, or set POLZA_API_KEY (environment or .env).",
     );
   }
   return key;

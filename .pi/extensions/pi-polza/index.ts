@@ -1,35 +1,33 @@
 /**
  * pi-polza — dynamic Polza AI model provider for Pi.
  *
- * Registers the `polza` provider (OpenAI-compatible chat completions) whose model list is built
- * from the live Polza catalog, enriched with OpenRouter technical metadata for missing fields.
+ * Registers the `polza` provider as a **complete pi-ai provider** (`createProvider`) so Pi owns
+ * authentication: the key is entered once via `/login polza` and stored by Pi. `POLZA_API_KEY`
+ * (environment or `.env`) remains an explicit fallback for CI/headless use.
  *
- * Native RUB accounting: catalog RUB prices are reference only; actual billed cost is
- * `usage.cost_rub`, tapped from each raw response by `stream.ts` and persisted as custom session
- * entries. Pi's USD cost stays 0 on purpose (compatibility placeholder).
+ * The model list is built from the live Polza catalog, enriched with OpenRouter technical metadata
+ * for missing fields. Native RUB accounting taps `usage.cost_rub` from each raw response and
+ * persists it as custom session entries. Pi's USD cost stays 0 on purpose (compatibility placeholder).
  */
-import type { ExtensionAPI, ExtensionContext, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+import { createProvider, type Model } from "@earendil-works/pi-ai";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { PolzaCostAccumulator, recordsFromEntries } from "./accounting.ts";
+import { polzaApiKeyAuth } from "./auth.ts";
 import { fetchBalance } from "./balance.ts";
 import { registerPolzaCommands } from "./commands.ts";
 import { hasPolzaApiKey, loadDotEnv } from "./env.ts";
-import { POLZA_API_V1 } from "./http.ts";
-import { buildPolzaCatalog, type CatalogBuildResult } from "./provider.ts";
+import { POLZA_API_V1, setRuntimePolzaApiKey } from "./http.ts";
+import { buildPolzaCatalog, POLZA_PROVIDER_ID, toPiModels, type CatalogBuildResult, type OpenRouterMode } from "./provider.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
 import { PolzaStatusController, POLZA_STATUS_KEY } from "./status.ts";
-import { createPolzaStreamSimple } from "./stream.ts";
-
-interface RefreshModelsContextLike {
-  allowNetwork: boolean;
-  signal: AbortSignal;
-}
+import { createPolzaApiStreams } from "./stream.ts";
 
 interface SessionStartContextLike {
   sessionManager: { getEntries(): Iterable<unknown> };
 }
 
 export default async function piPolza(pi: ExtensionAPI): Promise<void> {
-  // Pi does not auto-load a project .env; do it here as a development/bootstrap fallback.
+  // Pi does not auto-load a project .env; do it here so the native auth resolve() can see it.
   loadDotEnv();
 
   let registry: ResolvedModel[] = [];
@@ -53,10 +51,26 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
     },
   });
 
+  /** Ask Pi for the resolved Polza credential so non-stream HTTP paths share it. */
+  const installCredentialFromRegistry = async (ctx: ExtensionContext): Promise<void> => {
+    try {
+      const key = await ctx.modelRegistry.getApiKeyForProvider(POLZA_PROVIDER_ID);
+      if (key) setRuntimePolzaApiKey(key);
+    } catch {
+      // Unconfigured providers are expected; leave the runtime key untouched.
+    }
+  };
+
   const syncStatusForContext = (ctx: ExtensionContext): void => {
     activeCtx = ctx;
-    if (ctx.mode === "tui" && ctx.model?.provider === "polza") status.activate(ctx.signal);
-    else status.deactivate();
+    if (ctx.mode === "tui" && ctx.model?.provider === POLZA_PROVIDER_ID) {
+      void (async () => {
+        await installCredentialFromRegistry(ctx);
+        status.activate(ctx.signal);
+      })();
+    } else {
+      status.deactivate();
+    }
   };
 
   // Capture native RUB per request: in-memory accumulator + custom session entry.
@@ -96,39 +110,47 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
     status.deactivate();
   });
 
-  const refreshModels = async (context: RefreshModelsContextLike): Promise<ProviderModelConfig[]> => {
-    if (!context.allowNetwork) {
-      // Offline / cache-only startup: never hit the network here.
-      return lastBuild?.models ?? [];
-    }
-    const build = await buildPolzaCatalog({ openRouter: "live", signal: context.signal });
+  const buildCatalog = async (
+    apiKey: string | undefined,
+    mode: OpenRouterMode,
+    signal?: AbortSignal,
+  ): Promise<Model<"openai-completions">[]> => {
+    const build = await buildPolzaCatalog({ openRouter: mode, signal, apiKey });
     lastBuild = build;
     registry = build.resolved;
-    return build.models;
+    return toPiModels(build.models);
   };
 
-  let initialModels: ProviderModelConfig[] = [];
+  // Baseline models for env/.env users; native-credential users get theirs on the post-login refresh.
+  let initialModels: Model<"openai-completions">[] = [];
   if (hasPolzaApiKey()) {
     try {
-      const build = await buildPolzaCatalog({ openRouter: "cache-first" });
-      lastBuild = build;
-      registry = build.resolved;
-      initialModels = build.models;
+      initialModels = await buildCatalog(undefined, "cache-first");
     } catch {
-      // Non-fatal: registration continues with an empty list; refreshModels can retry later.
+      // Non-fatal: the provider registers with an empty baseline and refreshModels can retry.
     }
   }
 
-  pi.registerProvider("polza", {
-    name: "Polza AI",
-    baseUrl: POLZA_API_V1,
-    apiKey: "$POLZA_API_KEY",
-    api: "openai-completions",
-    models: initialModels,
-    refreshModels,
-    // Tap raw responses for usage.cost_rub without touching Pi's transport.
-    streamSimple: createPolzaStreamSimple(onUsageRecord),
-  });
+  pi.registerProvider(
+    createProvider<"openai-completions">({
+      id: POLZA_PROVIDER_ID,
+      name: "Polza AI",
+      baseUrl: POLZA_API_V1,
+      // Pi owns credential storage and the /login flow; we only describe the key source.
+      auth: { apiKey: polzaApiKeyAuth },
+      models: initialModels,
+      // Dynamic overlay: Pi persists it and restores it on the next start, even offline.
+      fetchModels: async (context) => {
+        const credentialKey =
+          context.credential?.type === "api_key" ? context.credential.key : undefined;
+        if (credentialKey) setRuntimePolzaApiKey(credentialKey);
+        // OpenRouter stays off the critical path on startup; only an explicit force goes live.
+        return buildCatalog(credentialKey, context.force ? "live" : "cache-first", context.signal);
+      },
+      // Tap raw responses for usage.cost_rub without touching Pi's transport.
+      api: createPolzaApiStreams(onUsageRecord),
+    }),
+  );
 
   registerPolzaCommands(pi, {
     getRegistry: () => registry,

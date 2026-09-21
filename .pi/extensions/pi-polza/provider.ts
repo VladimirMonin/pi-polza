@@ -9,8 +9,10 @@
  *  - `"cache-first"` use cache immediately, no network (fast startup); refresh later via refreshModels.
  *  - `"off"`         no enrichment.
  */
+import type { Model } from "@earendil-works/pi-ai";
 import type { ProviderModelConfig } from "@earendil-works/pi-coding-agent";
 import { fetchCatalog } from "./catalog.ts";
+import { POLZA_API_V1 } from "./http.ts";
 import { fetchOpenRouterModels, indexOpenRouterById, type OpenRouterModel } from "./metadata/openrouter.ts";
 import {
   describeCacheState,
@@ -24,6 +26,9 @@ import { VERIFIED_TOOL_SUPPORT } from "./verified.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
 
 export type OpenRouterMode = "live" | "cache-first" | "off";
+
+/** Pi provider id. Stable and user-visible in `/login`, `/model` and `/polza-*` output. */
+export const POLZA_PROVIDER_ID = "polza";
 
 /** Where this build's OpenRouter metadata came from. */
 export type OpenRouterSource = "live" | "cache-fresh" | "cache-stale" | "off" | "none";
@@ -52,13 +57,15 @@ export interface BuildOptions {
   allowOpenRouter?: boolean;
   /** Page size for the Polza catalog. */
   pageLimit?: number;
+  /** Explicit Polza API key; defaults to the runtime/env key. */
+  apiKey?: string;
 }
 
 export async function buildPolzaCatalog(options: BuildOptions = {}): Promise<CatalogBuildResult> {
   const startedAt = Date.now();
 
   const polzaStart = Date.now();
-  const { models: polzaModels } = await fetchCatalog({ limit: options.pageLimit ?? 100, signal: options.signal });
+  const { models: polzaModels } = await fetchCatalog({ limit: options.pageLimit ?? 100, signal: options.signal, apiKey: options.apiKey });
   const polzaMs = Date.now() - polzaStart;
 
   const mode: OpenRouterMode = options.openRouter ?? (options.allowOpenRouter === false ? "off" : "live");
@@ -117,4 +124,19 @@ export async function buildPolzaCatalog(options: BuildOptions = {}): Promise<Cat
     fetchedAt: Date.now(),
     timings: { polzaMs, openRouterMs, totalMs: Date.now() - startedAt },
   };
+}
+
+/**
+ * Convert mapper output to the full pi-ai `Model` shape `createProvider` expects.
+ *
+ * `ProviderModelConfig` omits the provider identity, so it is added here — this is the single
+ * place where the Pi-facing `polza` provider id and base URL are stamped onto models.
+ */
+export function toPiModels(configs: ProviderModelConfig[]): Model<"openai-completions">[] {
+  return configs.map((config) => ({
+    ...config,
+    api: "openai-completions" as const,
+    provider: POLZA_PROVIDER_ID,
+    baseUrl: POLZA_API_V1,
+  }));
 }

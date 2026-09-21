@@ -16,6 +16,8 @@ export interface FetchCatalogOptions {
   /** Safety valve against an unbounded loop if `meta.totalPages` is ever wrong. */
   maxPages?: number;
   signal?: AbortSignal;
+  /** Explicit API key; defaults to the runtime key installed by Pi's native auth, then env/.env. */
+  apiKey?: string;
   /** Called after each page for progress reporting. */
   onPage?: (page: PolzaCatalogPage, pageNumber: number) => void;
 }
@@ -44,7 +46,7 @@ export async function fetchCatalog(options: FetchCatalogOptions = {}): Promise<C
   while (pageNumber <= totalPages && pages < maxPages) {
     const payload = await polzaJson<PolzaCatalogPage>(
       `/models/catalog?page=${pageNumber}&limit=${limit}`,
-      { signal: options.signal },
+      { signal: options.signal, apiKey: options.apiKey },
     );
     const data = Array.isArray(payload.data) ? payload.data : [];
     models.push(...data);

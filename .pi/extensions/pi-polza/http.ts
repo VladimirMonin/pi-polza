@@ -12,6 +12,49 @@ export const POLZA_API_V2 = `${POLZA_ORIGIN}/api/v2`;
 
 const SENSITIVE_KEY = /^(authorization|proxy-authorization|api[-_]?key|apikey|x-api-key|access[-_]?token|refresh[-_]?token|secret)$/i;
 
+/**
+ * Key resolved at runtime by Pi's native auth (`/login polza`) for this process.
+ *
+ * Pi resolves the credential before streaming and hands it to the transport, but our own
+ * non-stream HTTP paths (catalog, balance, `/polza-*` commands) need the same key. The native
+ * auth `resolve()` and the provider's `fetchModels()` run early in the request lifecycle and
+ * install it here, so those paths never invent their own credential storage.
+ */
+let runtimeApiKey: string | null = null;
+
+/** Install the key Pi resolved from its credential store or the environment. */
+export function setRuntimePolzaApiKey(key: string | null | undefined): void {
+  const trimmed = typeof key === "string" ? key.trim() : "";
+  runtimeApiKey = trimmed.length > 0 ? trimmed : null;
+}
+
+/** Whether a runtime key was installed (value is never returned). */
+export function hasRuntimePolzaApiKey(): boolean {
+  return runtimeApiKey !== null;
+}
+
+/** Every live secret that must never appear in a log line. */
+function activeSecrets(): string[] {
+  const secrets = new Set<string>();
+  if (runtimeApiKey) secrets.add(runtimeApiKey);
+  const fromEnv = process.env.POLZA_API_KEY?.trim();
+  if (fromEnv) secrets.add(fromEnv);
+  return [...secrets];
+}
+
+/** Replace any live secret embedded in a free-form string. */
+function maskSecrets(text: string): string {
+  let out = text;
+  for (const secret of activeSecrets()) out = out.split(secret).join("<redacted>");
+  return out;
+}
+
+/** The configured key from any source without revealing it; throws a safe message when missing. */
+export function requirePolzaApiKey(): string {
+  if (runtimeApiKey) return runtimeApiKey;
+  return getPolzaApiKey();
+}
+
 export type Headers = Record<string, string>;
 
 /** Remove credentials from a header map. Never mutate the input. */
@@ -26,13 +69,9 @@ export function redactHeaders(headers: Headers | undefined): Headers {
 
 /** Deep-redact sensitive-looking keys. Also masks any string that literally equals the live key. */
 export function redactJson(value: unknown): unknown {
-  const secret = process.env.POLZA_API_KEY?.trim();
   const walk = (node: unknown, depth: number): unknown => {
     if (depth > 20) return "<max-depth>";
-    if (typeof node === "string") {
-      if (secret && node.includes(secret)) return node.split(secret).join("<redacted>");
-      return node;
-    }
+    if (typeof node === "string") return maskSecrets(node);
     if (Array.isArray(node)) return node.map((item) => walk(item, depth + 1));
     if (node && typeof node === "object") {
       const out: Record<string, unknown> = {};
@@ -48,9 +87,7 @@ export function redactJson(value: unknown): unknown {
 
 /** Redact a free-form string that might embed the live key. */
 export function redactText(text: string): string {
-  const secret = process.env.POLZA_API_KEY?.trim();
-  if (!secret) return text;
-  return text.split(secret).join("<redacted>");
+  return maskSecrets(text);
 }
 
 /** Parse a value that may be a decimal string or a number; missing/invalid → 0. */
@@ -81,6 +118,8 @@ export interface PolzaFetchOptions {
   signal?: AbortSignal;
   /** Timeout in ms; defaults to 60s. */
   timeoutMs?: number;
+  /** Explicit key; defaults to the runtime key installed by Pi's native auth, then env/.env. */
+  apiKey?: string;
 }
 
 /**
@@ -88,7 +127,7 @@ export interface PolzaFetchOptions {
  * Response bodies are returned raw; callers must redact before persisting/logging.
  */
 export async function polzaFetch(pathOrUrl: string, options: PolzaFetchOptions = {}): Promise<Response> {
-  const key = getPolzaApiKey();
+  const key = options.apiKey?.trim() || requirePolzaApiKey();
   const url = pathOrUrl.startsWith("http") ? pathOrUrl : `${POLZA_API_V1}${pathOrUrl}`;
 
   const controller = new AbortController();

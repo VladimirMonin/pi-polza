@@ -10,7 +10,14 @@
  * module), so it is intentionally not unit-tested under plain Node.
  */
 import { openAICompletionsApi } from "@earendil-works/pi-ai/compat";
-import type { AssistantMessageEventStream, Model, SimpleStreamOptions, TranscriptContext } from "@earendil-works/pi-ai/compat";
+import type {
+  AssistantMessageEventStream,
+  Model,
+  ProviderStreams,
+  SimpleStreamOptions,
+  StreamOptions,
+  TranscriptContext,
+} from "@earendil-works/pi-ai/compat";
 import { recordFromUsage, type PolzaUsageRecord } from "./accounting.ts";
 import { tapResponseForUsage } from "./tap.ts";
 
@@ -36,19 +43,14 @@ function debugReasoningPayload(body: unknown): void {
   }
 }
 
-export function createPolzaStreamSimple(onRecord: PolzaUsageSink) {
+export function createPolzaApiStreams(onRecord: PolzaUsageSink): ProviderStreams {
   // The bundled OpenAI-completions implementation — streaming, reasoning, tool calls, cache all
   // stay exactly as Pi does them.
   const api = openAICompletionsApi();
 
-  return function polzaStreamSimple(
-    model: Model<any>,
-    context: TranscriptContext,
-    options?: SimpleStreamOptions,
-  ): AssistantMessageEventStream {
-    const baseFetch = options?.fetch ?? globalThis.fetch;
-
-    const tappingFetch: typeof globalThis.fetch = async (input, init) => {
+  /** Wrap a base fetch so each successful response is observed for `usage.cost_rub` in passing. */
+  const tappingFetch = (model: Model<any>, baseFetch: typeof globalThis.fetch): typeof globalThis.fetch =>
+    async (input, init) => {
       debugReasoningPayload(init?.body);
       const response = await baseFetch(input, init);
       if (!response.ok) return response;
@@ -68,6 +70,14 @@ export function createPolzaStreamSimple(onRecord: PolzaUsageSink) {
       }
     };
 
-    return api.streamSimple(model, context, { ...options, fetch: tappingFetch });
+  return {
+    stream: (model: Model<any>, context: TranscriptContext, options?: StreamOptions): AssistantMessageEventStream => {
+      const baseFetch = options?.fetch ?? globalThis.fetch;
+      return api.stream(model, context, { ...options, fetch: tappingFetch(model, baseFetch) });
+    },
+    streamSimple: (model: Model<any>, context: TranscriptContext, options?: SimpleStreamOptions): AssistantMessageEventStream => {
+      const baseFetch = options?.fetch ?? globalThis.fetch;
+      return api.streamSimple(model, context, { ...options, fetch: tappingFetch(model, baseFetch) });
+    },
   };
 }
