@@ -29,6 +29,7 @@ models exist, what their limits are, or what a request actually cost. This plugi
 - Vision / tools / reasoning metadata, with honest `unknown`
 - OpenRouter metadata enrichment (limits, modalities, capabilities)
 - Actual `usage.cost_rub` accounting — Polza's own number, not an estimate
+- Subagent cost accounting: foreground automatically, background on run completion
 - Account balance and session cost in Pi's footer
 - Streaming responses and tool calling
 - Four slash commands for inspecting models, cost and balance
@@ -130,14 +131,66 @@ streaming requests, which are tapped incrementally rather than buffered. It surv
 Pi's standard USD `cost` field is intentionally left at `0` — native RUB numbers are never written
 into it.
 
+## Subagents and background tasks
+
+Pi can run subagents (for example through `pi-subagents`). `pi-polza` accounts for their spending
+separately from the main session:
+
+| Subagent kind | How it is accounted |
+| --- | --- |
+| Foreground | Automatically: it inherits the parent's provider, so its requests land in the main session as usual. |
+| Background | On completion: it runs in a detached process with its own `pi-polza` instance, so its spending is imported into the main session once the run has finished. |
+
+**What counts.** Only real Polza responses carrying `usage.cost_rub`: requests from the main
+session, from foreground subagents and from completed background subagents. That is the only source
+of the totals.
+
+**When it updates.** Main and foreground — on every completed request; background — after the run
+completes. While a background run is still in flight its spending may not be included yet; that is
+an honest state, not zero.
+
+**What does not count.** Other providers (Anthropic, OpenAI, …); independent sessions of other
+users or peers, even when they share the same Polza account; external API clients that reach Polza
+outside `pi-polza`. Foreign spend is never converted to RUB and **never shown as `0 ₽`** — it is
+simply excluded from the report.
+
+**Where to look.** Pi's footer (`Polza <balance> ₽ | Spent <cost> ₽`) and `/polza-cost`.
+`/polza-balance` shows the **whole account wallet**, not session cost: the balance also moves
+because of other sessions and applications, so its delta is not a measure of one run.
+
+**Attribution limitation.** Foreground subagents contribute their amount but not their agent name.
+Their requests are indistinguishable from the main agent's (especially with matching models and
+parallel children), so the plugin does not guess an owner. In `/polza-cost` they are part of
+`Root session` — the total is correct, the attribution is not available.
+
+**When data is incomplete.** With incomplete data the footer appends a `partial` marker and
+`/polza-cost` gains a `Coverage` section with priced/unpriced request counts. An unknown cost stays
+unknown and never becomes `0 ₽`.
+
+> The `pi-subagents` integration is **optional**. If the package is not installed, `pi-polza`
+> behaves as before: nothing is discovered and no errors are shown.
+
 ## Commands
 
 | Command | Description |
 | --- | --- |
 | `/polza-model-info` | Capabilities, limits, pricing and metadata sources for the current model |
-| `/polza-cost` | Actual Polza cost for the current session, in RUB |
+| `/polza-cost` | Actual Polza cost: main session, foreground and completed background subagents |
 | `/polza-balance` | Polza account balance (native RUB) and footer refresh |
 | `/polza-refresh` | Reload the Polza catalog and OpenRouter enrichment now |
+
+### What `/polza-cost` shows
+
+The report is split into sections:
+
+- **Root session** — main session plus foreground subagents (the total is correct, per-agent
+  attribution is not available);
+- **Background subagents** — completed background children, grouped by the agent name and model the
+  launch runtime reported;
+- **Tokens** and **Models** — token and cost breakdown by model;
+- **Coverage** — how many requests have a known cost versus an unknown one, with a
+  `complete` / `partial` marker;
+- **Not included** — foreign providers, explicitly excluded from RUB accounting.
 
 <details>
 <summary>Command screenshots</summary>
@@ -197,6 +250,10 @@ treated strictly as enrichment:
 - Catalog metadata and the actually billed cost can differ. Billing always follows `usage.cost_rub`.
 - Pi's standard USD `cost` field is not used for native RUB accounting.
 - Metadata completeness varies by model; not every model has equally rich information.
+- Foreground subagents have no per-agent breakdown: their spending is part of the main session
+  total because it is indistinguishable from the main agent's own requests.
+- Background subagent import is verified by offline tests; a full live run with background
+  subagents in a real Pi environment is out of scope for this version.
 
 ## Updating
 
