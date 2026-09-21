@@ -140,3 +140,20 @@ export function toNumber(value: unknown): number | undefined {
   }
   return undefined;
 }
+
+/**
+ * Usable chat models that publish both prompt and completion prices, cheapest prompt first.
+ * Used to pick cheap models for live experiments; not a routing decision.
+ */
+export function rankUsableChatModelsByPromptPrice(models: PolzaCatalogModel[]): PolzaCatalogModel[] {
+  const price = (model: PolzaCatalogModel): number | undefined =>
+    toNumber(model.top_provider?.pricing?.prompt_per_million);
+  return models
+    .filter(isUsableChatModel)
+    .filter(
+      (model) =>
+        price(model) !== undefined &&
+        toNumber(model.top_provider?.pricing?.completion_per_million) !== undefined,
+    )
+    .sort((a, b) => price(a)! - price(b)! || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}

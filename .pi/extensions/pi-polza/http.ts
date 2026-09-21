@@ -53,6 +53,16 @@ export function redactText(text: string): string {
   return text.split(secret).join("<redacted>");
 }
 
+/** Parse a value that may be a decimal string or a number; missing/invalid → 0. */
+export function toNumberSafe(value: unknown): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
 export class PolzaHttpError extends Error {
   readonly status: number;
   readonly body: string;
