@@ -1,228 +1,234 @@
 # pi-polza
 
-**Polza AI as a native dynamic provider for [Pi Agent](https://pi.dev) — hundreds of models, native Pi login, and actual RUB billing.**
+Русский · [English](README.en.md)
 
-`pi-polza` plugs [Polza AI](https://polza.ai) into Pi as a real model provider. Install it once,
-sign in with your Polza API key through Pi, pick a model and work normally. The plugin discovers
-the available models and their capabilities dynamically, and tracks Polza's own spending in rubles
-right in Pi's footer.
+**Polza AI как нативный динамический провайдер моделей для [Pi Agent](https://pi.dev) — сотни моделей, нативный вход через Pi и реальный учёт расходов в рублях.**
 
-![Normal Pi usage with the Polza footer](docs/images/polza-session.webp)
+`pi-polza` подключает [Polza AI](https://polza.ai) к Pi как настоящий провайдер моделей. Установите
+один раз, войдите в Polza по API-ключу прямо в Pi, выберите модель и работайте как обычно. Плагин сам
+обнаруживает доступные модели и их возможности, а расходы Polza в рублях отслеживает прямо в футере
+Pi.
 
-## Why
+![Обычная работа в Pi с футером Polza](docs/images/polza-session.webp)
 
-Polza exposes an OpenAI-compatible endpoint, but a plain endpoint tells Pi nothing about *which*
-models exist, what their limits are, or what a request actually cost. This plugin fills that gap:
+## Зачем это нужно
 
-- the catalog is **discovered at runtime**, not hard-coded;
-- authentication is **native Pi `/login`**, so your key lives in Pi's own credential store;
-- money is tracked in **RUB**, the currency Polza actually bills in.
+Polza предоставляет OpenAI-совместимый endpoint, но обычный endpoint ничего не сообщает Pi о том,
+*какие* модели существуют, каковы их лимиты и сколько на самом деле стоил запрос. Этот плагин
+закрывает пробел:
 
-## Features
+- каталог **обнаруживается во время работы**, а не прописан жёстко;
+- авторизация — **нативный Pi `/login`**, поэтому ключ лежит в штатном хранилище Pi;
+- деньги учитываются в **рублях** — валюте, в которой Polza реально выставляет счёт.
 
-- Dynamic Polza model catalog (loaded at startup, refreshable in place)
-- Native Pi `/login` authentication — no config files required
-- Hundreds of compatible LLMs from a single provider
-- Context-window and max-output limits
-- Vision / tools / reasoning metadata, with honest `unknown`
-- OpenRouter metadata enrichment (limits, modalities, capabilities)
-- Actual `usage.cost_rub` accounting — Polza's own number, not an estimate
-- Account balance and session cost in Pi's footer
-- Streaming responses and tool calling
-- Four slash commands for inspecting models, cost and balance
+## Возможности
 
-## Installation
+- Динамический каталог моделей Polza (загружается на старте, обновляется на месте)
+- Нативная авторизация Pi через `/login` — конфигурационные файлы не нужны
+- Сотни совместимых LLM у одного провайдера
+- Лимиты контекстного окна и максимальной длины вывода
+- Метаданные зрения / инструментов / reasoning с честным `unknown`
+- Обогащение метаданных из OpenRouter (лимиты, модальности, возможности)
+- Учёт фактического `usage.cost_rub` — числа самой Polza, а не оценки
+- Баланс аккаунта и стоимость сессии в футере Pi
+- Потоковые ответы и вызов инструментов
+- Четыре слэш-команды для просмотра моделей, расходов и баланса
 
-Requires [Pi Agent](https://pi.dev) and Node.js ≥ 22.6.
+## Установка
+
+Требуется [Pi Agent](https://pi.dev) и Node.js ≥ 22.6.
 
 ```bash
 pi install https://github.com/VladimirMonin/pi-polza
 ```
 
-Pin a release if you prefer:
+Если предпочитаете зафиксировать релиз:
 
 ```bash
 pi install https://github.com/VladimirMonin/pi-polza@v0.1.0
 ```
 
-Verify it is installed:
+Проверить установку:
 
 ```bash
 pi list
 ```
 
-## Authentication
+## Авторизация
 
-Start Pi and run `/login`:
+Запустите Pi и выполните `/login`:
 
 ```
 /login
 ```
 
-1. Choose **Polza AI**.
-2. Choose **Sign in with an API key**.
-3. Paste your Polza API key.
+1. Выберите **Polza AI**.
+2. Выберите **Sign in with an API key**.
+3. Вставьте свой API-ключ Polza.
 
-![Polza AI in Pi's native login](docs/images/polza-login.webp)
+![Polza AI в нативном окне входа Pi](docs/images/polza-login.webp)
 
-The key is stored by Pi itself (the same place as every other provider) and is used for the model
-catalog, chat requests and balance lookups. No `.env` file is needed.
+Ключ сохраняет сам Pi (там же, где и для остальных провайдеров), и он используется для каталога
+моделей, запросов чата и запросов баланса. Файл `.env` не нужен.
 
-> If the model list looks empty after login, run `/polza-refresh` to reload the catalog.
+> Если список моделей после входа пуст, выполните `/polza-refresh`, чтобы перезагрузить каталог.
 
-### Advanced: environment / headless / CI
+### Для продвинутых: окружение / headless / CI
 
-For headless or CI use you can supply the key through the environment instead of `/login`:
+Для headless- и CI-сценариев ключ можно передать через окружение вместо `/login`:
 
-| Variable | Meaning |
+| Переменная | Значение |
 | --- | --- |
-| `POLZA_API_KEY` | The key itself. |
-| `PI_POLZA_ENV_FILE` | Path to a specific `.env` file to read. |
+| `POLZA_API_KEY` | Сам ключ. |
+| `PI_POLZA_ENV_FILE` | Путь к конкретному файлу `.env`, который нужно прочитать. |
 
-Otherwise, a `.env` file in the project you launch Pi from is read:
+Иначе читается `.env` в том проекте, из которого вы запускаете Pi:
 
 ```dotenv
-POLZA_API_KEY=<your-key>
+POLZA_API_KEY=<ваш-ключ>
 ```
 
-A stored Pi credential always wins; the environment is only consulted when nothing is stored.
+Сохранённые учётные данные Pi всегда имеют приоритет; окружение учитывается только тогда, когда
+ничего не сохранено.
 
-## Quick start
+## Быстрый старт
 
 ```
 /login            → Polza AI → Sign in with an API key
-/model            → search "polza" → pick any model
-<ask anything>
+/model            → поиск "polza" → выберите любую модель
+<задайте вопрос>
 ```
 
-![Selecting a Polza model](docs/images/polza-models.webp)
+![Выбор модели Polza](docs/images/polza-models.webp)
 
-## Models
+## Модели
 
-The catalog is fetched from Polza at startup and cached. Around **285 models** are selectable for
-chat, out of ~398 catalog entries; the rest are filtered out because they are not usable chat
-models or because their limits cannot be determined reliably (see
-[Known limitations](#known-limitations)).
+Каталог загружается из Polza при старте и кэшируется. Для чата доступно около **285 моделей** из
+~398 записей каталога; остальные отфильтрованы, потому что не являются пригодными чат-моделями либо
+их лимиты не удаётся определить надёжно (см. [Известные ограничения](#известные-ограничения)).
 
-`/polza-refresh` reloads the catalog and the OpenRouter enrichment without restarting Pi.
+`/polza-refresh` перезагружает каталог и обогащение из OpenRouter без перезапуска Pi.
 
-## RUB billing
+## Учёт расходов в рублях
 
-Polza bills in rubles, and Pi's own cost field is denominated in USD. `pi-polza` therefore keeps
-native RUB accounting **separate** from Pi's USD `cost`:
+Polza выставляет счёт в рублях, а встроенное поле стоимости Pi номинировано в долларах. Поэтому
+`pi-polza` ведёт нативный учёт в рублях **отдельно** от долларового `cost` в Pi:
 
-| Source | Used for |
+| Источник | Для чего используется |
 | --- | --- |
-| Catalog pricing | A reference estimate (₽ per 1M tokens) |
-| `usage.cost_rub` | The **actual** amount Polza charged for the request |
-| `GET /api/v2/balance` | The account balance |
+| Цены из каталога | Справочная оценка (₽ за 1 млн токенов) |
+| `usage.cost_rub` | **Фактическая** сумма, которую Polza списала за запрос |
+| `GET /api/v2/balance` | Баланс аккаунта |
 
-Session cost is accumulated from the `cost_rub` value Polza returns for every request — including
-streaming requests, which are tapped incrementally rather than buffered. It survives a restart.
+Стоимость сессии накапливается из значения `cost_rub`, которое Polza возвращает на каждый запрос, —
+включая потоковые, которые перехватываются инкрементально, а не буферизуются. Она сохраняется между
+перезапусками.
 
-> The plugin does **not** estimate actual session spending from token prices. It records Polza's own
-> `usage.cost_rub` value returned for each request. Catalog prices are shown only as an estimate.
+> Плагин **не** оценивает фактические расходы сессии по ценам за токены. Он записывает собственное
+> значение `usage.cost_rub`, возвращённое Polza на каждый запрос. Цены из каталога показываются
+> только как ориентир.
 
-![Actual session cost in RUB](docs/images/polza-cost.webp)
+![Фактическая стоимость сессии в рублях](docs/images/polza-cost.webp)
 
-Pi's standard USD `cost` field is intentionally left at `0` — native RUB numbers are never written
-into it.
+Стандартное долларовое поле `cost` в Pi намеренно оставлено равным `0` — нативные рублёвые числа в
+него никогда не записываются.
 
-## Commands
+## Команды
 
-| Command | Description |
+| Команда | Описание |
 | --- | --- |
-| `/polza-model-info` | Capabilities, limits, pricing and metadata sources for the current model |
-| `/polza-cost` | Actual Polza cost for the current session, in RUB |
-| `/polza-balance` | Polza account balance (native RUB) and footer refresh |
-| `/polza-refresh` | Reload the Polza catalog and OpenRouter enrichment now |
+| `/polza-model-info` | Возможности, лимиты, цены и источники метаданных для текущей модели |
+| `/polza-cost` | Фактические расходы Polza за текущую сессию, в рублях |
+| `/polza-balance` | Баланс аккаунта Polza (нативные рубли) и обновление футера |
+| `/polza-refresh` | Перезагрузить каталог Polza и обогащение из OpenRouter |
 
 <details>
-<summary>Command screenshots</summary>
+<summary>Скриншоты команд</summary>
 
-**Command discovery**
+**Список команд**
 
-![Polza commands](docs/images/polza-commands.webp)
+![Команды Polza](docs/images/polza-commands.webp)
 
 **`/polza-model-info`**
 
-![Model info panel](docs/images/polza-model-info.webp)
+![Панель информации о модели](docs/images/polza-model-info.webp)
 
 **`/polza-balance`**
 
-![Balance panel](docs/images/polza-balance.webp)
+![Панель баланса](docs/images/polza-balance.webp)
 
 </details>
 
-## Model metadata
+## Метаданные моделей
 
-Metadata is resolved from several sources, in priority order:
+Метаданные собираются из нескольких источников в порядке приоритета:
 
-1. **Polza** — primary source of truth (the model exists and is billable).
-2. **OpenRouter** — enrichment only: limits, modalities and capabilities when Polza does not
-   state them. Matched by exact model id; never guessed.
-3. **Verified override** — a rare, explicit correction backed by a live probe.
-4. **`unknown`** — when none of the above provides a trustworthy value.
+1. **Polza** — основной источник истины (модель существует и тарифицируется).
+2. **OpenRouter** — только обогащение: лимиты, модальности и возможности, если Polza их не указала.
+   Сопоставление по точному id модели; догадки исключены.
+3. **Проверенный override** — редкая явная правка, подтверждённая живым экспериментом.
+4. **`unknown`** — когда ни один из источников не даёт достоверного значения.
 
-Because of this, fields can read `unknown` or `not verified`. That means **there is no reliable
-confirmation**, not that the plugin failed. The plugin never invents capabilities to fill a gap:
-an absent value stays `unknown`, never `0`.
+Из-за этого поля могут показывать `unknown` или `not verified`. Это означает, что **надёжного
+подтверждения нет**, а не что плагин сломался. Плагин никогда не придумывает возможности, чтобы
+заполнить пробел: отсутствующее значение остаётся `unknown`, а не `0`.
 
 <details>
-<summary>Screenshot: metadata detail</summary>
+<summary>Скриншот: детали метаданных</summary>
 
-![Model info metadata](docs/images/polza-model-info.webp)
+![Метаданные модели](docs/images/polza-model-info.webp)
 
 </details>
 
-## OpenRouter enrichment
+## Обогащение из OpenRouter
 
-OpenRouter's public model list is used to fill gaps in limits, modalities and capabilities. It is
-treated strictly as enrichment:
+Публичный список моделей OpenRouter используется, чтобы заполнить пробелы в лимитах, модальностях и
+возможностях. Он применяется строго как обогащение:
 
-- matched by **exact model id** only;
-- a Polza value always wins over an OpenRouter value;
-- disagreements are recorded as **conflicts** and surfaced in `/polza-model-info`;
-- results are cached on disk (`.pi/pi-polza-cache/`) and reused offline, so a slow or unavailable
-  OpenRouter never blocks startup.
+- сопоставление только по **точному id модели**;
+- значение Polza всегда важнее значения OpenRouter;
+- расхождения фиксируются как **конфликты** и показываются в `/polza-model-info`;
+- результаты кэшируются на диске (`.pi/pi-polza-cache/`) и переиспользуются офлайн, поэтому медленный
+  или недоступный OpenRouter никогда не блокирует старт.
 
-## Known limitations
+## Известные ограничения
 
-- Reasoning *levels* (`minimal`/`low`/`medium`/`high`/…) are not verified for every model family;
-  the panel reports `not verified` where we have no reproducible evidence.
-- Some Polza-exclusive models are omitted when mandatory Pi model limits cannot be determined
-  reliably — better absent than wrong.
-- Catalog metadata and the actually billed cost can differ. Billing always follows `usage.cost_rub`.
-- Pi's standard USD `cost` field is not used for native RUB accounting.
-- Metadata completeness varies by model; not every model has equally rich information.
+- Уровни reasoning (`minimal`/`low`/`medium`/`high`/…) подтверждены не для всех семейств моделей;
+  в панели указывается `not verified` там, где нет воспроизводимых доказательств.
+- Часть моделей, эксклюзивных для Polza, опущена, когда обязательные для Pi лимиты не удаётся
+  определить надёжно — лучше отсутствовать, чем ошибаться.
+- Метаданные каталога и фактически списанная сумма могут расходиться. Тарификация всегда следует
+  `usage.cost_rub`.
+- Стандартное долларовое поле `cost` в Pi не используется для нативного учёта в рублях.
+- Полнота метаданных различается по моделям: не у всех одинаково богатая информация.
 
-## Updating
-
-```bash
-pi update --extensions          # update all installed packages
-pi update --extension pi-polza  # update just this one (npm installs)
-```
-
-Git installs pinned to a tag only move when you install the new ref:
+## Обновление
 
 ```bash
-pi install https://github.com/VladimirMonin/pi-polza@v0.1.1
+pi update --extensions          # обновить все установленные пакеты
+pi update --extension pi-polza  # обновить только этот (для npm-установок)
 ```
 
-## Uninstalling
+Установки из Git, зафиксированные на теге, сдвигаются только при установке нового ref:
+
+```bash
+pi install https://github.com/VladimirMonin/pi-polza@v0.2.0
+```
+
+## Удаление
 
 ```bash
 pi remove https://github.com/VladimirMonin/pi-polza
 ```
 
-This removes the package from Pi settings. Pi's stored Polza credential can be removed separately
-via `/login` (or Pi's credential management).
+Это удаляет пакет из настроек Pi. Сохранённые учётные данные Polza удаляются отдельно через `/login`
+(или средствами управления учётными данными Pi).
 
-## Development
+## Разработка
 
 ```bash
-npm test            # offline unit tests
-npm run test:live   # live tests (needs a key; spends a small amount)
+npm test            # офлайн-юнит-тесты
+npm run test:live   # live-тесты (нужен ключ; тратит небольшую сумму)
 npm run probe:catalog
 npm run probe:balance
 npm run probe:chat
@@ -230,22 +236,23 @@ npm run probe:startup
 npm run audit:secrets
 ```
 
-Repository layout:
+Структура репозитория:
 
-- `.pi/extensions/pi-polza/` — the extension: runtime code and shared modules
-- `scripts/` — standalone diagnostic probes
-- `tests/`, `tests-live/` — offline and live tests
-- `notes/` — engineering notes and live-experiment results
-- `instructions/manual-testing.md` — how to prepare and run an install acceptance test
+- `.pi/extensions/pi-polza/` — расширение: рабочий код и общие модули
+- `scripts/` — отдельные диагностические probe-скрипты
+- `tests/`, `tests-live/` — офлайн- и live-тесты
+- `notes/` — инженерные заметки и результаты живых экспериментов
+- `instructions/manual-testing.md` — как подготовить и провести приёмочный тест установки
+- `instructions/commit-and-release-guide.md` — конвенции коммитов, тегов и релизов
 
-## Security
+## Безопасность
 
-- `POLZA_API_KEY` is never logged — not to stdout/stderr, traces, session logs or errors.
-- The `Authorization` header is stripped before any HTTP logging.
-- `.env` is git-ignored; `.env.example` shows the expected shape.
-- The plugin stores no credential of its own — it uses Pi's native credential store.
-- `npm run audit:secrets` scans the working tree and Git history for leaked secrets.
+- `POLZA_API_KEY` никогда не логируется — ни в stdout/stderr, ни в трейсы, журналы сессий или ошибки.
+- Заголовок `Authorization` удаляется перед любым HTTP-логированием.
+- `.env` добавлен в `.gitignore`; `.env.example` показывает ожидаемый формат.
+- Плагин не хранит собственных учётных данных — используется нативное хранилище Pi.
+- `npm run audit:secrets` сканирует рабочее дерево и историю Git на утечки секретов.
 
-## License
+## Лицензия
 
 [MIT](LICENSE)
