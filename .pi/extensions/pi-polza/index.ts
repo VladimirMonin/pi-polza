@@ -8,13 +8,15 @@
  * `usage.cost_rub`, tapped from each raw response by `stream.ts` and persisted as custom session
  * entries. Pi's USD cost stays 0 on purpose (compatibility placeholder).
  */
-import type { ExtensionAPI, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext, ProviderModelConfig } from "@earendil-works/pi-coding-agent";
 import { PolzaCostAccumulator, recordsFromEntries } from "./accounting.ts";
+import { fetchBalance } from "./balance.ts";
 import { registerPolzaCommands } from "./commands.ts";
 import { hasPolzaApiKey, loadDotEnv } from "./env.ts";
 import { POLZA_API_V1 } from "./http.ts";
 import { buildPolzaCatalog, type CatalogBuildResult } from "./provider.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
+import { PolzaStatusController, POLZA_STATUS_KEY } from "./status.ts";
 import { createPolzaStreamSimple } from "./stream.ts";
 
 interface RefreshModelsContextLike {
@@ -33,6 +35,29 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
   let registry: ResolvedModel[] = [];
   let lastBuild: CatalogBuildResult | null = null;
   const accounting = new PolzaCostAccumulator();
+  let activeCtx: ExtensionContext | null = null;
+
+  // Persistent footer: `Polza <balance> ₽ | Session <cost> ₽`, rendered by Pi's native status bar.
+  const status = new PolzaStatusController({
+    setStatus: (text) => {
+      try {
+        activeCtx?.ui.setStatus(POLZA_STATUS_KEY, text);
+      } catch {
+        // Status bar is best-effort; never break the runtime.
+      }
+    },
+    fetchBalance: (signal) => fetchBalance(signal),
+    getSessionCost: () => {
+      const summary = accounting.summary();
+      return { requests: summary.requests, costRub: summary.actualCostRub };
+    },
+  });
+
+  const syncStatusForContext = (ctx: ExtensionContext): void => {
+    activeCtx = ctx;
+    if (ctx.mode === "tui" && ctx.model?.provider === "polza") status.activate(ctx.signal);
+    else status.deactivate();
+  };
 
   // Capture native RUB per request: in-memory accumulator + custom session entry.
   const onUsageRecord = (record: Parameters<PolzaCostAccumulator["add"]>[0]): void => {
@@ -42,6 +67,8 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
     } catch {
       // No active session (e.g. ephemeral mode) — keep the runtime record only.
     }
+    // Update the footer as soon as a billed request lands.
+    status.requestCompleted(activeCtx?.signal);
   };
 
   // Rebuild the accumulator from the session on start/resume so accounting survives restarts.
@@ -53,6 +80,20 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
     } catch {
       // Session entries unavailable; keep an empty accumulator.
     }
+    syncStatusForContext(ctx);
+  });
+
+  pi.on("model_select", (_event, ctx) => {
+    syncStatusForContext(ctx);
+  });
+
+  pi.on("agent_end", (_event, ctx) => {
+    activeCtx = ctx;
+    status.requestCompleted(ctx.signal);
+  });
+
+  pi.on("session_shutdown", () => {
+    status.deactivate();
   });
 
   const refreshModels = async (context: RefreshModelsContextLike): Promise<ProviderModelConfig[]> => {
@@ -101,5 +142,6 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
           }
         : null,
     getUsageRecords: () => accounting.all,
+    getStatusController: () => status,
   });
 }

@@ -5,8 +5,9 @@
  */
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { summarizeRecords, type PolzaUsageRecord } from "./accounting.ts";
-import { fetchBalance, formatRub } from "./balance.ts";
+import { formatRub, type PolzaBalance } from "./balance.ts";
 import { extractInternalCapabilities } from "./mapper.ts";
+import type { PolzaStatusController } from "./status.ts";
 import type { Provenanced } from "./metadata/provenance.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
 
@@ -16,6 +17,8 @@ export interface CommandDeps {
   getLastBuildInfo: () => { polzaCount: number; eligible: number; openRouterError: string | null; fetchedAt: number } | null;
   /** Native RUB usage records captured for the current session. */
   getUsageRecords: () => readonly PolzaUsageRecord[];
+  /** Footer controller, used by `/polza-balance` to force a balance refresh. */
+  getStatusController: () => PolzaStatusController;
 }
 
 function show(value: unknown): string {
@@ -90,6 +93,19 @@ function rubOrUnknown(value: number | null): string {
   return value === null ? "unknown" : formatRub(value);
 }
 
+function balanceLines(balance: PolzaBalance): string[] {
+  return [
+    "Polza balance",
+    `  Balance:         ${formatRub(balance.amount)}`,
+    `  Available:       ${formatRub(balance.available)}`,
+    `  Reserved:        ${formatRub(balance.reservedAmount)}`,
+    `  Lifetime spent:  ${formatRub(balance.spentAmount)}`,
+    balance.updatedAt ? `  Updated:         ${balance.updatedAt}` : "  Updated:         unknown",
+    "",
+    "`Lifetime spent` is global account spend, not the current session cost.",
+  ];
+}
+
 function costLines(records: readonly PolzaUsageRecord[]): string[] {
   const summary = summarizeRecords(records);
   if (summary.requests === 0) return ["No Polza usage recorded in this session yet."];
@@ -153,26 +169,25 @@ export function registerPolzaCommands(pi: ExtensionAPI, deps: CommandDeps): void
   });
 
   pi.registerCommand("polza-balance", {
-    description: "Show the Polza account balance (native RUB)",
+    description: "Show the Polza account balance (native RUB) and refresh the footer",
     handler: async (_args: string, ctx: ExtensionCommandContext) => {
       try {
-        const balance = await fetchBalance(ctx.signal);
-        ctx.ui.notify(
-          [
-            "Polza balance",
-            `  Balance:         ${formatRub(balance.amount)}`,
-            `  Available:       ${formatRub(balance.available)}`,
-            `  Reserved:        ${formatRub(balance.reservedAmount)}`,
-            `  Lifetime spent:  ${formatRub(balance.spentAmount)}`,
-            balance.updatedAt ? `  Updated:         ${balance.updatedAt}` : "  Updated:         unknown",
-            "",
-            "`Lifetime spent` is global account spend, not the current session cost.",
-          ].join("\n"),
-          "info",
-        );
+        const controller = deps.getStatusController();
+        await controller.refreshBalance(ctx.signal);
+        const balance = controller.current;
+        if (!balance) throw new Error("balance unavailable");
+        ctx.ui.notify(balanceLines(balance).join("\n"), "info");
       } catch (error) {
         ctx.ui.notify(`Failed to fetch Polza balance: ${error instanceof Error ? error.message : String(error)}`, "error");
       }
+    },
+  });
+
+  pi.registerCommand("polza-refresh", {
+    description: "Force a refresh of the Polza catalog and OpenRouter enrichment",
+    handler: async (_args: string, ctx: ExtensionCommandContext) => {
+      ctx.ui.notify("Reloading extensions to refresh the Polza catalog…", "info");
+      await ctx.reload();
     },
   });
 }

@@ -6,6 +6,8 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { registerPolzaCommands } from "../.pi/extensions/pi-polza/commands.ts";
 import { recordFromUsage, type PolzaUsageRecord } from "../.pi/extensions/pi-polza/accounting.ts";
+import { fetchBalance } from "../.pi/extensions/pi-polza/balance.ts";
+import { PolzaStatusController } from "../.pi/extensions/pi-polza/status.ts";
 import { resolveModel } from "../.pi/extensions/pi-polza/metadata/resolver.ts";
 import type { ResolvedModel } from "../.pi/extensions/pi-polza/metadata/types.ts";
 import { polzaModel } from "./fixtures.ts";
@@ -17,7 +19,17 @@ function collectCommands(): { handlers: Map<string, Handler>; notify: (name: str
   const fakePi = {
     registerCommand: (name: string, options: { handler: Handler }) => handlers.set(name, options.handler),
   } as unknown as Parameters<typeof registerPolzaCommands>[0];
-  registerPolzaCommands(fakePi, { getRegistry: () => registry, getLastBuildInfo: () => null, getUsageRecords: () => usageRecords });
+  const status = new PolzaStatusController({
+    setStatus: () => {},
+    fetchBalance: (signal) => fetchBalance(signal),
+    getSessionCost: () => ({ requests: usageRecords.length, costRub: null }),
+  });
+  registerPolzaCommands(fakePi, {
+    getRegistry: () => registry,
+    getLastBuildInfo: () => null,
+    getUsageRecords: () => usageRecords,
+    getStatusController: () => status,
+  });
   return { handlers, notify: () => {} };
 }
 
@@ -169,4 +181,22 @@ test("/polza-balance prints native RUB fields and does not call it session cost"
   assert.match(text, /Reserved:/);
   assert.match(text, /Lifetime spent:/);
   assert.match(text, /not the current session cost/);
+});
+
+test("/polza-refresh reloads extensions to refresh the catalog", async () => {
+  registry = [];
+  const { handlers } = collectCommands();
+  const handler = handlers.get("polza-refresh")!;
+  let reloads = 0;
+  const notifications: Array<{ message: string; type: string }> = [];
+  const ctx = {
+    ui: { notify: (message: string, type: string = "info") => notifications.push({ message, type }) },
+    reload: async () => {
+      reloads += 1;
+    },
+  };
+  await handler("", ctx);
+  assert.equal(reloads, 1);
+  assert.equal(notifications[0]!.type, "info");
+  assert.match(notifications[0]!.message, /refresh/i);
 });
