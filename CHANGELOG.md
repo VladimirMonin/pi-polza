@@ -10,10 +10,18 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-21
+
+### Добавлено
+
+- `CHANGELOG.md` в формате Keep a Changelog — журнал изменений проекта.
+- Инструкция по конвенциям коммитов, тегов и релизов
+  ([instructions/commit-and-release-guide.md](instructions/commit-and-release-guide.md)).
+
 ### Изменено
 
-- README переведён на русский как основной; английская версия вынесена в `README.en.md`.
-- Добавлен этот журнал изменений.
+- README переведён на русский как основной язык; английская версия вынесена в
+  [`README.en.md`](README.en.md).
 
 ## [0.1.0] - 2026-09-21
 
@@ -59,5 +67,6 @@
 - `npm run audit:secrets` проверяет рабочее дерево, историю Git, workspace и сессии на утечки;
   перед релизом — PASS.
 
-[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.1.1
 [0.1.0]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.1.0
