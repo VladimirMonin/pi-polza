@@ -1,19 +1,34 @@
 {
   "name": "pi-polza",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "private": false,
   "type": "module",
-  "description": "Experimental dynamic Polza AI model provider for Pi Agent (catalog + chat + capabilities + usage + native RUB accounting + balance).",
+  "description": "Polza AI as a native dynamic model provider for Pi Agent: auto-loaded catalog, capabilities, OpenRouter enrichment and actual RUB billing.",
   "keywords": [
     "pi-package",
     "pi",
+    "pi-agent",
     "polza",
+    "polza-ai",
     "provider",
-    "extension"
+    "extension",
+    "llm",
+    "rub"
   ],
+  "license": "MIT",
+  "homepage": "https://github.com/VladimirMonin/pi-polza#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VladimirMonin/pi-polza.git"
+  },
+  "bugs": {
+    "url": "https://github.com/VladimirMonin/pi-polza/issues"
+  },
   "files": [
     ".pi/extensions/pi-polza",
-    "README.md"
+    "docs/images",
+    "README.md",
+    "LICENSE"
   ],
   "pi": {
     "extensions": [
