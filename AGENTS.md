@@ -2,6 +2,6 @@
 
 **Идея проекта:** [docs/pi_polza_provider_architecture.md](docs/pi_polza_provider_architecture.md)
 
-**Конвенции коммитов, тегов и релизов:** [instructions/commit-and-release-guide.md](instructions/commit-and-release-guide.md)
+**Конвенции коммитов, тегов, релизов и журнала изменений:** [instructions/commit-and-release-guide.md](instructions/commit-and-release-guide.md)
 
 Мы делаем `pi-polza` — полноценный динамический провайдер моделей Polza AI для Pi Agent (не просто OpenAI-compatible endpoint): автозагрузка каталога моделей, определение capabilities (context, vision, reasoning, tools), pricing с раздельным учётом USD и нативных RUB, медиа-инструменты и основа для model routing.

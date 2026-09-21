@@ -1,43 +1,43 @@
-# Commit, tag and release conventions
+# Конвенции коммитов, тегов и релизов
 
-Project convention for this repository. Derived from the commits actually made here — the history is
-the reference. The rules apply to humans and to agents alike.
+Внутреннее соглашение проекта. Выведено из коммитов, реально сделанных в этом репозитории —
+эталоном служит история. Правила одинаковы для людей и для агентов.
 
-## 1. Commit messages
+## 1. Сообщения коммитов
 
 ```
-<type>(<scope>): <imperative summary>
+<тип>(<область>): <повелительное описание>
 
-<optional body: bullets explaining WHY, wrapped ~80 cols>
+<необязательное тело: пункты, объясняющие ПОЧЕМУ, строки ~80 символов>
 ```
 
-- **Imperative mood**, present tense: `add`, `fix`, `document` — not `added` / `fixes`.
-- Subject **≤ 72 characters**, no trailing period, no `wip`.
-- Blank line, then the body if the reason is not obvious from the subject.
-- Mention **why**, not a restatement of the diff. Numbers/measurements are welcome.
-- One logical change per commit. Do not mix a refactor with a behaviour change.
+- **Повелительное наклонение**, настоящее время: `add`, `fix`, `document` — не `added` / `fixes`.
+- Тема **≤ 72 символов**, без точки в конце, без `wip`.
+- Пустая строка, затем тело, если причина неочевидна из темы.
+- Писать **почему**, а не пересказ диффа. Числа и измерения приветствуются.
+- Один логический смысл на коммит. Не смешивать рефакторинг с изменением поведения.
 
-### Types actually used
+### Типы, реально используемые в проекте
 
-| Type | Use for |
+| Тип | Для чего |
 | --- | --- |
-| `feat` | new user-visible behaviour |
-| `fix` | bug fix |
-| `docs` | README, notes, guides |
-| `test` | tests only |
-| `style` | presentation/formatting, no behaviour change |
-| `refactor` | internal restructuring, same behaviour |
-| `perf` | performance |
-| `chore` | tooling, package metadata, housekeeping |
-| `security` | secrets, auth, auditing |
+| `feat` | новое видимое пользователю поведение |
+| `fix` | исправление ошибки |
+| `docs` | README, заметки, инструкции |
+| `test` | только тесты |
+| `style` | оформление/формат, без изменения поведения |
+| `refactor` | внутренняя перестройка, поведение то же |
+| `perf` | производительность |
+| `chore` | инструменты, метаданные пакета, рутина |
+| `security` | секреты, аутентификация, аудит |
 
-### Scopes
+### Области (scope)
 
-Lowercase area names. Reuse existing ones before inventing new: `auth`, `catalog`, `metadata`,
+Строчные имена областей. Сначала переиспользуйте существующие: `auth`, `catalog`, `metadata`,
 `mapper`, `usage`, `accounting`, `pricing`, `provider`, `stream`, `status`, `commands`, `ui`,
 `presentation`, `env`, `readme`, `package`, `live`, `audit`, `security`.
 
-### Examples from this repository
+### Примеры из этого репозитория
 
 ```
 feat(auth): register Polza via createProvider with native Pi API-key login
@@ -47,7 +47,7 @@ docs(readme): user-facing README for the public release
 security(audit): key-shaped regex instead of literals; ignore placeholders and the script itself
 ```
 
-Body example (why + evidence):
+Пример тела (почему + доказательства):
 
 ```
 fix(env): never read the source checkout .env from an installed package
@@ -58,31 +58,31 @@ fix(env): never read the source checkout .env from an installed package
 - adds tests/env.test.ts (5 cases) → 101 unit tests
 ```
 
-### Never
+### Чего делать нельзя
 
-- **Do not rewrite history**: no `git commit --amend` on pushed commits, no `rebase`, no
-  `push --force`. Fix forward with a new commit.
-- Do not commit `.env`, keys, credentials, raw artifacts or runtime caches.
-- Do not commit without running `npm test` if code under `.pi/extensions/pi-polza/` changed.
+- **Не переписывать историю**: никакого `git commit --amend` для запушенных коммитов, никакого
+  `rebase`, никакого `push --force`. Исправления — новым коммитом вперёд.
+- Не коммитить `.env`, ключи, учётные данные, сырые артефакты и рабочие кэши.
+- Не коммитить, не запустив `npm test`, если менялся код в `.pi/extensions/pi-polza/`.
 
-## 2. Versioning
+## 2. Версионирование
 
-SemVer `MAJOR.MINOR.PATCH`. Pre-1.0 policy used here:
+SemVer `MAJOR.MINOR.PATCH`. Политика до 1.0, принятая здесь:
 
-- `PATCH` — bug fix, docs, internal change;
-- `MINOR` — user-visible feature (breaking changes are allowed in a MINOR while `0.x`);
-- `MAJOR` — reserved for `1.0.0`.
+- `PATCH` — исправление, документация, внутреннее изменение;
+- `MINOR` — видимая пользователю возможность (ломающие изменения допустимы в MINOR, пока `0.x`);
+- `MAJOR` — зарезервировано под `1.0.0`.
 
-`version` lives in **`package.json` only** (single source of truth) and must match the tag.
+`version` живёт **только в `package.json`** (единственный источник истины) и совпадает с тегом.
 
-## 3. Tags
+## 3. Теги
 
-- **Annotated** tags: `git tag -a v0.1.0 -m "..."`.
-- Format `vMAJOR.MINOR.PATCH`.
-- The tag message is a short release summary and seeds the GitHub Release body.
-- **Never move or delete a published tag.** To correct a release, publish a new patch.
-- Push tags explicitly: `git push origin vX.Y.Z`.
-- Verify: `git describe --tags --exact-match HEAD` prints the tag when `HEAD` is exactly released.
+- **Аннотированные** теги: `git tag -a v0.1.0 -m "..."`.
+- Формат `vMAJOR.MINOR.PATCH`.
+- Сообщение тега — краткая сводка релиза, оно же ложится в основу GitHub Release.
+- **Опубликованный тег никогда не двигать и не удалять.** Исправление релиза — новый патч.
+- Пушить теги явно: `git push origin vX.Y.Z`.
+- Проверка: `git describe --tags --exact-match HEAD` печатает тег, когда `HEAD` — ровно релиз.
 
 ```bash
 git tag -a v0.1.0 -m "pi-polza v0.1.0
@@ -94,57 +94,99 @@ Native Polza AI provider for Pi Agent.
 git push origin v0.1.0
 ```
 
-## 4. Release process
+## 4. Процесс релиза
 
-Pre-flight (all must be true):
+Предполётная проверка (всё должно быть истинно):
 
 ```
-[ ] npm test                     green
-[ ] npm run test:live            green (spends a small amount)
-[ ] npm run audit:secrets        PASS (tree, history, workspace)
-[ ] npm pack --dry-run           only intended files; no tests/scripts/notes/.env/caches
-[ ] README + screenshots         current
-[ ] package.json version         bumped and matching the intended tag
-[ ] git status                   clean
+[ ] npm test                     зелёный
+[ ] npm run test:live            зелёный (тратит небольшую сумму)
+[ ] npm run audit:secrets        PASS (дерево, история, workspace)
+[ ] npm pack --dry-run           только нужные файлы; без tests/scripts/notes/.env/кэшей
+[ ] README + скриншоты           актуальны
+[ ] version в package.json       поднят и совпадает с планируемым тегом
+[ ] CHANGELOG.md                 обновлён (см. §5)
+[ ] git status                   чисто
 ```
 
-Then:
+Затем:
 
 ```bash
-# 1. version bump commit (chore(release) or docs/feat as appropriate)
-# 2. tag
-git tag -a vX.Y.Z -m "<release summary>"
-# 3. push branch and tag
+# 1. коммит с поднятием версии (chore(release) или подходящий тип)
+# 2. тег
+git tag -a vX.Y.Z -m "<сводка релиза>"
+# 3. ветка и тег
 git push origin main
 git push origin vX.Y.Z
-# 4. GitHub Release with the packed artifact attached
+# 4. GitHub Release с приложенным артефактом
 npm pack
 gh release create vX.Y.Z --verify-tag --title "pi-polza vX.Y.Z" --notes-file notes.txt "pi-polza-X.Y.Z.tgz#pi-polza-X.Y.Z.tgz"
 rm -f pi-polza-X.Y.Z.tgz
 ```
 
-Post-release verification:
+Пост-проверка релиза:
 
 ```bash
 gh release view vX.Y.Z --json tagName,isDraft,isPrerelease,assets
 curl -s -o /dev/null -w "%{http_code}\n" https://github.com/VladimirMonin/pi-polza/releases/download/vX.Y.Z/pi-polza-X.Y.Z.tgz
 ```
 
-Release notes outline: one-line pitch → screenshot → highlights → install command → verification
-results → known limitations → license.
+Структура заметок к релизу: одна строка-питч → скриншот → ключевые возможности → команда установки
+→ результаты проверок → известные ограничения → лицензия.
 
-## 5. Publish safety
+## 5. Журнал изменений (`CHANGELOG.md`)
 
-- **Stop and get explicit approval** before the first `git push`, tag, GitHub Release or any publish.
-- **No `npm publish`.** Distribution is `pi install` from GitHub.
-- Never create the GitHub repository before the owner/name is confirmed.
-- Before any push, confirm no secret is tracked: `git ls-files | grep -iE '\.env$|\.tgz$|credential'`.
+- Формат — [Keep a Changelog 1.1.0](https://keepachangelog.com/ru/1.1.0/), версии — SemVer.
+- **Язык — русский** (публичная аудитория проекта русскоязычная).
+- Разделы, в этом порядке; пустые не включать:
 
-## 6. Quick reference
+  `Добавлено` · `Изменено` · `Устарело` · `Удалено` · `Исправлено` · `Безопасность`
+
+- Обновлять **в том же коммите**, что и само изменение, в разделе `[Unreleased]` — не откладывать
+  «на потом».
+- Формулировать **с точки зрения пользователя**: что он теперь может или чего больше не сломается,
+  а не пересказ диффа.
+- Внутренние изменения без пользовательского эффекта в журнал не попадают.
+- **При релизе**:
+  1. переименовать `[Unreleased]` → `[X.Y.Z] - ГГГГ-ММ-ДД`;
+  2. добавить новый пустой `[Unreleased]`;
+  3. обновить ссылки сравнения внизу файла.
+- **Прошлые записи не переписывать.**
+- Заготовка записи для новой версии:
+
+```markdown
+## [Unreleased]
+
+### Добавлено
+
+- ...
+
+### Исправлено
+
+- ...
+```
+
+Ссылки внизу файла:
+
+```markdown
+[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/vX.Y.Z...HEAD
+[X.Y.Z]: https://github.com/VladimirMonin/pi-polza/releases/tag/vX.Y.Z
+```
+
+## 6. Безопасность публикации
+
+- **Остановиться и получить явное разрешение** перед первым `git push`, тегом, GitHub Release или
+  любой публикацией.
+- **Никакого `npm publish`.** Распространение — `pi install` из GitHub.
+- Не создавать GitHub-репозиторий до подтверждения владельца и имени.
+- Перед любым пушем убедиться, что секреты не отслеживаются:
+  `git ls-files | grep -iE '\.env$|\.tgz$|credential'`.
+
+## 7. Шпаргалка
 
 ```bash
-git log --oneline -10                 # recent style reference
-git describe --tags --exact-match HEAD  # confirm HEAD is a release
-git ls-remote --tags origin           # confirm the tag exists remotely
-npm test && npm run audit:secrets     # before every release
+git log --oneline -10                   # свежие примеры стиля
+git describe --tags --exact-match HEAD  # убедиться, что HEAD — это релиз
+git ls-remote --tags origin             # убедиться, что тег есть на remote
+npm test && npm run audit:secrets       # перед каждым релизом
 ```
