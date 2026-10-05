@@ -112,7 +112,13 @@ export function normalizeUsage(raw: RawUsageLike | null | undefined): Normalized
    * Polza documents `cost_rub` as the per-request RUB charge. Some responses may only expose
    * `cost`; we keep both so callers can tell which one was actually present.
    */
-  const costRub = numOrNull(usage.cost_rub);
+  const rawCostRub = usage.cost_rub;
+  const parsedCostRub = typeof rawCostRub === "number" ? rawCostRub
+    : typeof rawCostRub === "string" && rawCostRub.trim() !== "" ? Number(rawCostRub) : NaN;
+  const costRub = Number.isFinite(parsedCostRub) ? parsedCostRub : null;
+  if (rawCostRub !== undefined && rawCostRub !== null && costRub === null) {
+    anomalies.push("cost_rub malformed");
+  }
   const costRaw = numOrNull(usage.cost);
   const currency = typeof usage.currency === "string" ? usage.currency : null;
 

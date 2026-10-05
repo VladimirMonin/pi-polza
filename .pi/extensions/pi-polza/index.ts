@@ -6,7 +6,7 @@
  * (environment or `.env`) remains an explicit fallback for CI/headless use.
  *
  * The model list is built from the live Polza catalog, enriched with OpenRouter technical metadata
- * for missing fields. Native RUB accounting taps `usage.cost_rub` from each raw response and
+ * for missing fields. Native RUB accounting observes `usage.cost_rub` before normalization and
  * persists it as custom session entries. Pi's USD cost stays 0 on purpose (compatibility placeholder).
  */
 import { createProvider, type Model } from "@earendil-works/pi-ai";
@@ -172,7 +172,7 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
         // OpenRouter stays off the critical path on startup; only an explicit force goes live.
         return buildCatalog(credentialKey, context.force ? "live" : "cache-first", context.signal);
       },
-      // Tap raw responses for usage.cost_rub without touching Pi's transport.
+      // Observe native provider events and account once on terminal completion.
       api: createPolzaApiStreams(onUsageRecord),
     }),
   );

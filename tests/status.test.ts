@@ -56,7 +56,7 @@ test("formatRubCompact adapts precision to magnitude", () => {
 
 test("formatBalanceStatus covers fresh, stale, unavailable and empty session", () => {
   assert.equal(formatBalanceStatus(snap(43.54, "fresh"), { requests: 8, costRub: 0.611 }), "Polza 43.54 ₽ | Spent 0.61 ₽");
-  assert.equal(formatBalanceStatus(snap(43.54, "stale"), { requests: 1, costRub: 0.5 }), "Polza 43.54 ₽ | Spent 0.50 ₽");
+  assert.equal(formatBalanceStatus(snap(43.54, "stale"), { requests: 1, costRub: 0.5 }), "Polza 43.54 ₽ stale | Spent 0.50 ₽");
   assert.equal(formatBalanceStatus(snap(null, "unavailable"), { requests: 1, costRub: 0.5 }), "Polza ? | Spent 0.50 ₽");
   assert.equal(formatBalanceStatus(snap(null, "unavailable"), { requests: 0, costRub: null }), "Polza ? | Spent 0.00 ₽");
   assert.equal(formatBalanceStatus(snap(10, "fresh"), { requests: 2, costRub: null }), "Polza 10.00 ₽ | Spent ?");
@@ -144,6 +144,12 @@ test("a known balance that later fails is shown as stale, not lost", async () =>
   now += BALANCE_TTL_MS + 1;
   await controller.refreshBalance();
   assert.equal(controller.snapshot.state, "stale");
+  assert.equal(controller.snapshot.value, 43.5);
+  assert.equal(statuses[statuses.length - 1], "Polza 43.50 ₽ stale | Spent 0.61 ₽");
+
+  failing = false;
+  await controller.refreshBalance();
+  assert.equal(controller.snapshot.state, "fresh");
   assert.equal(statuses[statuses.length - 1], "Polza 43.50 ₽ | Spent 0.61 ₽");
 });
 
@@ -173,10 +179,16 @@ test("requestCompleted refreshes only when the TTL expired", async () => {
   await tick();
   assert.equal(fetches, 1, "no refresh within TTL");
 
-  now += BALANCE_TTL_MS + 1;
+  now += BALANCE_TTL_MS - 5_000 - 1;
   controller.requestCompleted();
   await tick();
-  assert.equal(fetches, 2, "refresh after TTL");
+  assert.equal(fetches, 1, "no refresh one millisecond before TTL");
+  assert.equal(controller.snapshot.state, "fresh", "elapsed time alone does not introduce stale state");
+
+  now += 1;
+  controller.requestCompleted();
+  await tick();
+  assert.equal(fetches, 2, "refresh exactly at TTL boundary");
 });
 
 test("requestCompleted re-renders a partial subtotal without waiting for the TTL", async () => {
@@ -224,6 +236,44 @@ test("renderPolzaStatus uses muted labels, a dim separator, normal values and wa
   const failed = recordingTheme();
   renderPolzaStatus(failed.theme, polzaStatusModel(snap(null, "unavailable"), { requests: 0, costRub: null }));
   assert.ok(failed.calls.some((c) => c.color === "warning" && c.text === "?"));
+});
+
+test("stale marker uses semantic warning without recoloring the retained balance", () => {
+  const { theme, calls } = recordingTheme();
+  renderPolzaStatus(theme, polzaStatusModel(snap(43.54, "stale"), { requests: 1, costRub: 0.61 }));
+  assert.ok(calls.some((c) => c.color === "warning" && c.text === "stale"));
+  assert.ok(calls.some((c) => c.color === "text" && c.text === "43.54 ₽"));
+});
+
+test("in-flight balance refreshes coalesce; manual bypass and inactive behavior stay unchanged", async () => {
+  let resolve!: (value: PolzaBalance) => void;
+  let fetches = 0;
+  let now = 1_000_000;
+  const statuses: Array<string | undefined> = [];
+  const controller = new PolzaStatusController({
+    now: () => now,
+    setStatus: pushPlain(statuses),
+    getSessionCost: () => ({ requests: 1, costRub: 0.25 }),
+    fetchBalance: () => { fetches++; return new Promise((r) => { resolve = r; }); },
+  });
+  controller.activate();
+  controller.requestCompleted();
+  controller.activate();
+  await controller.refreshBalance();
+  assert.equal(fetches, 1, "all triggers share the pending refresh");
+  resolve(balance(10));
+  await tick();
+  assert.equal(controller.snapshot.state, "fresh");
+
+  const manual = controller.refreshBalance();
+  assert.equal(fetches, 2, "manual refresh bypasses the fresh TTL");
+  controller.deactivate();
+  resolve(balance(9));
+  await manual;
+  assert.equal(statuses.at(-1), undefined, "in-flight completion cannot reactivate footer");
+  now += BALANCE_TTL_MS;
+  controller.requestCompleted();
+  assert.equal(fetches, 2, "inactive completion does not fetch balance");
 });
 
 test("renderPolzaStatus marks a partial subtotal faintly, not as a warning", () => {

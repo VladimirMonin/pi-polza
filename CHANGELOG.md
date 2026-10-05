@@ -10,6 +10,18 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-05
+
+### Исправлено
+
+- Нативный учёт RUB исправлен для Pi Agent **1.0.2**: расходы Polza учитываются
+  один раз по последнему `usage.cost_rub` после успешного
+  завершения ответа, независимо от задержки закрытия HTTP-потока после `[DONE]`.
+  Отсутствующая или некорректная стоимость, ошибки и отменённые ответы отмечаются как
+  неизвестные, а не как нулевые; настоящий ноль сохраняется.
+- После неудачного обновления баланса футер сохраняет последнюю сумму с пометкой `stale`;
+  успешное обновление снимает пометку. Частота запросов баланса не изменена.
+
 ## [0.2.0] - 2026-09-21
 
 ### Добавлено
@@ -108,7 +120,8 @@
 - `npm run audit:secrets` проверяет рабочее дерево, историю Git, workspace и сессии на утечки;
   перед релизом — PASS.
 
-[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.2.1
 [0.2.0]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.2.0
 [0.1.1]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.1.1
 [0.1.0]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.1.0

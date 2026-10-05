@@ -37,6 +37,10 @@ models exist, what their limits are, or what a request actually cost. This plugi
 ## Installation
 
 Requires [Pi Agent](https://pi.dev) and Node.js ≥ 22.6.
+The native RUB accounting fix in **v0.2.1** was checked with Pi Agent **1.0.2**;
+compatibility with every 1.x version is not claimed.
+The owner confirmed the installed fix works in a new session; this is user-reported
+acceptance, separate from offline tests using synthetic SSE.
 
 ```bash
 pi install https://github.com/VladimirMonin/pi-polza
@@ -45,7 +49,7 @@ pi install https://github.com/VladimirMonin/pi-polza
 Pin a release if you prefer:
 
 ```bash
-pi install https://github.com/VladimirMonin/pi-polza@v0.2.0
+pi install https://github.com/VladimirMonin/pi-polza@v0.2.1
 ```
 
 Verify it is installed:
@@ -120,8 +124,12 @@ native RUB accounting **separate** from Pi's USD `cost`:
 | `usage.cost_rub` | The **actual** amount Polza charged for the request |
 | `GET /api/v2/balance` | The account balance |
 
-Session cost is accumulated from the `cost_rub` value Polza returns for every request — including
-streaming requests, which are tapped incrementally rather than buffered. It survives a restart.
+Session cost is recorded once from the last `usage.cost_rub` after a successful response.
+Pi's native observer snapshots the value before normalization without buffering the HTTP stream;
+accounting does not wait for it to close after `[DONE]`. The total survives a restart.
+Missing or malformed costs, errors and aborted responses stay unknown; a genuine zero is preserved.
+If a balance refresh fails, the footer retains the last amount with a `stale` marker;
+a successful refresh clears it.
 
 > The plugin does **not** estimate actual session spending from token prices. It records Polza's own
 > `usage.cost_rub` value returned for each request. Catalog prices are shown only as an estimate.
@@ -265,7 +273,7 @@ pi update --extension pi-polza  # update just this one (npm installs)
 Git installs pinned to a tag only move when you install the new ref:
 
 ```bash
-pi install https://github.com/VladimirMonin/pi-polza@v0.2.0
+pi install https://github.com/VladimirMonin/pi-polza@v0.2.1
 ```
 
 ## Uninstalling

@@ -1,83 +1,10 @@
-/**
- * Pi-specific stream wrapper for native RUB accounting.
- *
- * It does NOT reimplement the OpenAI-compatible transport. It delegates to the bundled
- * `openAICompletionsApi().streamSimple` and injects a `fetch` that wraps each response in a
- * transparent pass-through `TransformStream` (see `tap.ts`) to observe `usage.cost_rub`
- * incrementally — Pi still reads the original stream, unmodified and unbuffered.
- *
- * This module imports `@earendil-works/pi-ai/compat`, which is only resolvable inside Pi (virtual
- * module), so it is intentionally not unit-tested under plain Node.
- */
+/** Pi-specific entry point: reuse the bundled native transport and observe its raw usage. */
 import { openAICompletionsApi } from "@earendil-works/pi-ai/compat";
-import type {
-  AssistantMessageEventStream,
-  Model,
-  ProviderStreams,
-  SimpleStreamOptions,
-  StreamOptions,
-  TranscriptContext,
-} from "@earendil-works/pi-ai/compat";
-import { recordFromUsage, type PolzaUsageRecord } from "./accounting.ts";
-import { tapResponseForUsage } from "./tap.ts";
+import type { ProviderStreams } from "@earendil-works/pi-ai/compat";
+import { createPolzaAccountingStreams, type PolzaUsageSink } from "./stream-accounting.ts";
 
-export type PolzaUsageSink = (record: PolzaUsageRecord) => void;
-
-const REASONING_KEY = /reasoning|thinking|thinkingLevel|enable_thinking|chat_template/i;
-
-/**
- * Opt-in dev aid: with POLZA_DEBUG_PAYLOAD=1, print only the reasoning-related request keys so we
- * can confirm exactly what Pi's transport sends. Never logs prompts, headers or credentials.
- */
-function debugReasoningPayload(body: unknown): void {
-  if (process.env.POLZA_DEBUG_PAYLOAD !== "1" || typeof body !== "string") return;
-  try {
-    const parsed = JSON.parse(body) as Record<string, unknown>;
-    const picked: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(parsed)) {
-      if (REASONING_KEY.test(key)) picked[key] = value;
-    }
-    process.stderr.write(`[polza-payload] ${JSON.stringify(picked)}\n`);
-  } catch {
-    // ignore
-  }
-}
+export type { PolzaUsageSink } from "./stream-accounting.ts";
 
 export function createPolzaApiStreams(onRecord: PolzaUsageSink): ProviderStreams {
-  // The bundled OpenAI-completions implementation — streaming, reasoning, tool calls, cache all
-  // stay exactly as Pi does them.
-  const api = openAICompletionsApi();
-
-  /** Wrap a base fetch so each successful response is observed for `usage.cost_rub` in passing. */
-  const tappingFetch = (model: Model<any>, baseFetch: typeof globalThis.fetch): typeof globalThis.fetch =>
-    async (input, init) => {
-      debugReasoningPayload(init?.body);
-      const response = await baseFetch(input, init);
-      if (!response.ok) return response;
-      try {
-        return tapResponseForUsage(response, {
-          onUsage: (usage) => {
-            try {
-              onRecord(recordFromUsage(model.id, usage));
-            } catch {
-              // Accounting must never break the provider stream.
-            }
-          },
-        });
-      } catch {
-        // If wrapping is unsupported, streaming continues untapped rather than failing.
-        return response;
-      }
-    };
-
-  return {
-    stream: (model: Model<any>, context: TranscriptContext, options?: StreamOptions): AssistantMessageEventStream => {
-      const baseFetch = options?.fetch ?? globalThis.fetch;
-      return api.stream(model, context, { ...options, fetch: tappingFetch(model, baseFetch) });
-    },
-    streamSimple: (model: Model<any>, context: TranscriptContext, options?: SimpleStreamOptions): AssistantMessageEventStream => {
-      const baseFetch = options?.fetch ?? globalThis.fetch;
-      return api.streamSimple(model, context, { ...options, fetch: tappingFetch(model, baseFetch) });
-    },
-  };
+  return createPolzaAccountingStreams(openAICompletionsApi(), onRecord);
 }

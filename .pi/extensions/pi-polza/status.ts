@@ -85,7 +85,7 @@ export const PLAIN_STATUS_THEME: StatusTheme = {
 
 /**
  * Calm, low-noise styling: labels are muted, the separator is dim, values are normal text.
- * An unavailable balance is the only thing that draws attention (warning), and never the whole line.
+ * Unavailable balance and the stale marker use warning, never the whole line.
  * The `partial` marker is deliberately faint: it qualifies the number without competing with it.
  */
 export function renderPolzaStatus(theme: StatusTheme, model: PolzaStatusModel): string {
@@ -95,6 +95,7 @@ export function renderPolzaStatus(theme: StatusTheme, model: PolzaStatusModel): 
     theme.fg("muted", "Polza"),
     " ",
     balanceValue,
+    ...(model.balanceState === "stale" ? [" ", theme.fg("warning", "stale")] : []),
     theme.fg("dim", " | "),
     theme.fg("muted", "Spent"),
     " ",
