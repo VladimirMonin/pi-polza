@@ -36,11 +36,22 @@ models exist, what their limits are, or what a request actually cost. This plugi
 
 ## Installation
 
-Requires [Pi Agent](https://pi.dev) and Node.js ≥ 22.6.
-The native RUB accounting fix in **v0.2.1** was checked with Pi Agent **1.0.2**;
-compatibility with every 1.x version is not claimed.
-The owner confirmed the installed fix works in a new session; this is user-reported
-acceptance, separate from offline tests using synthetic SSE.
+Requires [Pi Agent](https://pi.dev) and Node.js ≥ 22.6. The provider does not require Python.
+
+### Compatibility
+
+**pi-polza 0.2.1 + Pi Agent 1.3.0** were checked on **Windows / Node.js 25.8.1**:
+the unchanged provider code ran with Pi's real native transport and synthetic SSE responses.
+Checks covered reasoning, tool-argument JSON assembly, usage, completion at `[DONE]` before
+delayed EOF, and exactly-once accounting of actual `usage.cost_rub` separately from USD
+(the USD `cost` stays `0`). This verifies the runtime contract; it is **not** a new live Polza
+service test or user acceptance on Pi 1.3.0.
+See the [compatibility evidence note (Russian)](notes/pi-1.3.0-compatibility.md) for scope and limits.
+
+Previously, the native RUB accounting fix in **v0.2.1** was checked with Pi Agent **1.0.2**;
+the owner confirmed the installed fix works in a new session. That historical user acceptance
+remains separate from the synthetic Pi 1.3.0 check.
+Compatibility with every 1.x version, every model, or a full live workflow is not claimed.
 
 ```bash
 pi install https://github.com/VladimirMonin/pi-polza
