@@ -96,18 +96,26 @@ git push origin v0.1.0
 
 ## 4. Процесс релиза
 
+Это граница **нового выпуска**, не обязательный ритуал установки принятого пакета или правки Markdown. Сначала affected checks; полный offline suite — здесь либо при общем impact. Применимое неизменённое runtime/live evidence переиспользуется со своей версией и scope. Отдельный живой эксперимент нужен при неопределённости внешнего контракта; не покупайте повтор того же ответа ради новой даты отчёта. Visual TUI — только для затронутого интерактивного поведения.
+
 Предполётная проверка (всё должно быть истинно):
 
 ```
 [ ] npm test                     зелёный
-[ ] npm run test:live            зелёный (тратит небольшую сумму)
-[ ] npm run audit:secrets        PASS (дерево, история, workspace)
-[ ] npm pack --dry-run           только нужные файлы; без tests/scripts/notes/.env/кэшей
+[ ] affected runtime/live cases  выполнены либо применимо переиспользованы; реальные scope/лимиты указаны
+[ ] public safety scan          exact candidate/history/artifact, без личных workspace/auth roots
+[ ] npm pack --dry-run --ignore-scripts  состав соответствует files; без tests/scripts/notes/.env/кэшей
 [ ] README + скриншоты           актуальны
 [ ] version в package.json       поднят и совпадает с планируемым тегом
 [ ] CHANGELOG.md                 обновлён (см. §5)
 [ ] git status                   чисто
 ```
+
+Отсутствующий обязательный результат не становится PASS по наличию credentials или metadata. Точные Pi/provider/Node/ОС и static/offline/runtime-with-synthetic-HTTP/live/visual результаты называются раздельно. Количество tests/models/files и размер package берутся из реального вывода, не старого примера. `private: false` в package metadata не разрешает npm publication.
+
+Legacy `audit:secrets` не является безопасным default release command: он читает привязанные к машине workspace roots/dotenv. Bounded public scanner проверяет только явный Git candidate/history и artifact, редактирует значения до display и отличает точные test fixtures/публичные hashes от credentials. Не сканировать домашние auth/settings/DB и не добавлять blanket allowlist. Неизменённые известные historical-path findings фиксируются отдельно от новой публичной дельты.
+
+Для сборки, устанавливающей Git pin, доставка имеет явную зависимость: исправленный provider → проверенный commit → доступность этого commit по GitHub → новый pin сборки → установка этой ревизии. Local path override не доказывает готовность публичного источника. Итоговые metadata и pin меняет их единственный текущий owner.
 
 Затем:
 
@@ -175,8 +183,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://github.com/VladimirMonin/pi-pol
 
 ## 6. Безопасность публикации
 
-- **Остановиться и получить явное разрешение** перед первым `git push`, тегом, GitHub Release или
-  любой публикацией.
+- Проверь действующее прямое разрешение на `git push`, tag и GitHub Release. Если scope уже выдан, выполняй разрешённую доставку без повторного запроса; не выдумывай pending approval. Staging/commit/ref operations остаются у назначенного владельца index.
 - **Никакого `npm publish`.** Распространение — `pi install` из GitHub.
 - Не создавать GitHub-репозиторий до подтверждения владельца и имени.
 - Перед любым пушем убедиться, что секреты не отслеживаются:

@@ -36,9 +36,11 @@ models exist, what their limits are, or what a request actually cost. This plugi
 
 ## Installation
 
-Requires [Pi Agent](https://pi.dev) and Node.js ≥ 22.6. The provider does not require Python.
+Requires [Pi Agent](https://pi.dev) ≥ 1.0.2 (< 2.0.0), Node.js ≥ 22.19.0, and Git for GitHub installation. Other packages in a build may require a newer Node. The provider needs no Python. For ready-made Code/Task profiles use the [build installer](https://github.com/VladimirMonin/pi-agent-build/blob/main/INSTALL_FOR_AGENTS.md), not a local checkout override of its pin.
 
-### Compatibility
+### Historically verified compatibility
+
+**pi-polza 0.2.2 + Pi Agent 1.4.0:** Windows checks exercised the real lifecycle with synthetic HTTP: persisted login → cold start without env/cache → catalog before main-model selection, restart, and material failures. This is not live Polza or fresh visual TUI acceptance. The minimum API version does not qualify every intermediate release.
 
 **pi-polza 0.2.1 + Pi Agent 1.3.0** were checked on **Windows / Node.js 25.8.1**:
 the unchanged provider code ran with Pi's real native transport and synthetic SSE responses.
@@ -57,10 +59,10 @@ Compatibility with every 1.x version, every model, or a full live workflow is no
 pi install https://github.com/VladimirMonin/pi-polza
 ```
 
-Pin a release if you prefer:
+For a fixed source, substitute an **already published** tag or commit:
 
 ```bash
-pi install https://github.com/VladimirMonin/pi-polza@v0.2.1
+pi install "https://github.com/VladimirMonin/pi-polza@v0.2.2"
 ```
 
 Verify it is installed:
@@ -86,7 +88,9 @@ Start Pi and run `/login`:
 The key is stored by Pi itself (the same place as every other provider) and is used for the model
 catalog, chat requests and balance lookups. No `.env` file is needed.
 
-> If the model list looks empty after login, run `/polza-refresh` to reload the catalog.
+> The main `polza` catalog must be available before a working request. If it is empty, `/polza-refresh` helps diagnosis but does not establish a successful cold start. Distinguish missing/rejected credentials, network failure, and an unavailable model ID; do not make `.env` mandatory instead of checking native auth.
+
+Select a model with `/model` and inspect `/polza-model-info`: the provider must be **`polza`**. A separate `polza-memory` route in some builds serves consolidation; memory embeddings and session-search are configured independently. A successful service-model response does not establish main-agent readiness. [Install and cold-start checks (Russian)](instructions/manual-testing.md).
 
 ### Advanced: environment / headless / CI
 
@@ -117,10 +121,7 @@ A stored Pi credential always wins; the environment is only consulted when nothi
 
 ## Models
 
-The catalog is fetched from Polza at startup and cached. Around **285 models** are selectable for
-chat, out of ~398 catalog entries; the rest are filtered out because they are not usable chat
-models or because their limits cannot be determined reliably (see
-[Known limitations](#known-limitations)).
+The catalog is fetched dynamically from Polza; metadata enrichment is cached. The selectable chat-model count changes: non-chat entries and models without reliably known mandatory limits are filtered out (see [Known limitations](#known-limitations)). A fixed count is not a readiness criterion.
 
 `/polza-refresh` reloads the catalog and the OpenRouter enrichment without restarting Pi.
 
@@ -276,16 +277,13 @@ treated strictly as enrichment:
 
 ## Updating
 
-```bash
-pi update --extensions          # update all installed packages
-pi update --extension pi-polza  # update just this one (npm installs)
-```
-
-Git installs pinned to a tag only move when you install the new ref:
+For a floating Git source, Pi uses `pi update <source>` (check `pi update --help` for your version). Tag/commit-pinned installs move to an explicitly selected **published ref**:
 
 ```bash
-pi install https://github.com/VladimirMonin/pi-polza@v0.2.1
+pi install "https://github.com/VladimirMonin/pi-polza@v0.2.2"
 ```
+
+A local `pi install "<REPO_ROOT>"` reads the working tree; it does not prove GitHub delivery. Do not load local and Git copies together. In an accepted build, its installer updates the provider from the manifest, not an unpinned bulk update. [Source differences (Russian)](instructions/manual-testing.md).
 
 ## Uninstalling
 
@@ -308,6 +306,8 @@ npm run probe:startup
 npm run audit:secrets
 ```
 
+Start a small fix with affected checks. A full offline suite belongs at the agreed release boundary or a broad-impact change; a live experiment resolves material external-contract uncertainty. Check TUI behavior when an interactive path changes, not after every link edit. Reuse applicable previous results with their original version and scope.
+
 Repository layout:
 
 - `.pi/extensions/pi-polza/` — the extension: runtime code and shared modules
@@ -324,6 +324,11 @@ Repository layout:
 - `.env` is git-ignored; `.env.example` shows the expected shape.
 - The plugin stores no credential of its own — it uses Pi's native credential store.
 - `npm run audit:secrets` scans the working tree and Git history for leaked secrets.
+
+## Related projects
+
+- [Pi Agent Build](https://github.com/VladimirMonin/pi-agent-build) — a version-pinned Code/Task build with an installer and guarded patches; its manifests/release notes own versions and acceptance.
+- [Project Foundation Kit](https://github.com/VladimirMonin/Project-Foundation-Kit) — portable engineering methods, instructions, and templates. Adopt the full `pack/` separately; the provider does not install it automatically.
 
 ## License
 

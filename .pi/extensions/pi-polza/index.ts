@@ -10,13 +10,13 @@
  * persists it as custom session entries. Pi's USD cost stays 0 on purpose (compatibility placeholder).
  */
 import { createProvider, type Model } from "@earendil-works/pi-ai";
-import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { readStoredCredential, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { PolzaCostAccumulator, recordsFromEntries } from "./accounting.ts";
-import { polzaApiKeyAuth } from "./auth.ts";
+import { polzaApiKeyAuth, resolvePolzaKey } from "./auth.ts";
 import { fetchBalance } from "./balance.ts";
 import { registerPolzaCommands } from "./commands.ts";
-import { hasPolzaApiKey, loadDotEnv } from "./env.ts";
-import { POLZA_API_V1, setRuntimePolzaApiKey } from "./http.ts";
+import { loadDotEnv } from "./env.ts";
+import { POLZA_API_V1, PolzaHttpError, setRuntimePolzaApiKey } from "./http.ts";
 import { importChildAccounting } from "./integrations/child-import.ts";
 import { createSubagentsBridge } from "./integrations/subagents.ts";
 import { buildPolzaCatalog, POLZA_PROVIDER_ID, toPiModels, type CatalogBuildResult, type OpenRouterMode } from "./provider.ts";
@@ -140,20 +140,43 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
     mode: OpenRouterMode,
     signal?: AbortSignal,
   ): Promise<Model<"openai-completions">[]> => {
-    const build = await buildPolzaCatalog({ openRouter: mode, signal, apiKey });
-    lastBuild = build;
-    registry = build.resolved;
-    return toPiModels(build.models);
+    try {
+      const build = await buildPolzaCatalog({ openRouter: mode, signal, apiKey });
+      lastBuild = build;
+      registry = build.resolved;
+      if (build.models.length === 0) throw new Error("Polza catalog contains no Pi-compatible models.");
+      return toPiModels(build.models);
+    } catch (error) {
+      // Fixed diagnostics: neither an echoed HTTP credential nor an arbitrary response body
+      // belongs in startup output. Native refresh retains the last published models on failure.
+      if (error instanceof PolzaHttpError && (error.status === 401 || error.status === 403)) {
+        throw new Error("Polza authorization rejected. Run /login polza to replace the API key.");
+      }
+      if (error instanceof Error && error.message === "Polza catalog contains no Pi-compatible models.") throw error;
+      throw new Error("Polza catalog unavailable (network or service failure). Pi can retain its saved catalog; retry /polza-refresh.");
+    }
   };
 
-  // Baseline models for env/.env users; native-credential users get theirs on the post-login refresh.
+  // Pi 1.4 registers extensions only AFTER ModelRuntime.create(); registration and service
+  // initialization restore the native models-store with allowNetwork:false. fetchModels is
+  // therefore NOT called before initial model selection (nor by credential synchronization).
+  // Use Pi's public credential accessor to seed the baseline before registering the provider.
+  // Pi still owns storage, login, subsequent auth resolution and dynamic catalog publication.
+  const credential = readStoredCredential(POLZA_PROVIDER_ID);
+  const initialKey = resolvePolzaKey({
+    credentialKey: credential?.type === "api_key" ? credential.key : undefined,
+    envKey: process.env.POLZA_API_KEY,
+  });
+  setRuntimePolzaApiKey(initialKey?.apiKey);
   let initialModels: Model<"openai-completions">[] = [];
-  if (hasPolzaApiKey()) {
+  if (initialKey) {
     try {
-      initialModels = await buildCatalog(undefined, "cache-first");
-    } catch {
-      // Non-fatal: the provider registers with an empty baseline and refreshModels can retry.
+      initialModels = await buildCatalog(initialKey.apiKey, "cache-first");
+    } catch (error) {
+      console.warn(`[pi-polza] Auth source: ${initialKey.source}. ${error instanceof Error ? error.message : "Polza catalog initialization failed."}`);
     }
+  } else {
+    console.warn("[pi-polza] Polza API key is not configured. Run /login polza, then /polza-refresh.");
   }
 
   pi.registerProvider(
@@ -168,7 +191,7 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
       fetchModels: async (context) => {
         const credentialKey =
           context.credential?.type === "api_key" ? context.credential.key : undefined;
-        if (credentialKey) setRuntimePolzaApiKey(credentialKey);
+        setRuntimePolzaApiKey(credentialKey);
         // OpenRouter stays off the critical path on startup; only an explicit force goes live.
         return buildCatalog(credentialKey, context.force ? "live" : "cache-first", context.signal);
       },

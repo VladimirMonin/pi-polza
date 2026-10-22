@@ -77,6 +77,13 @@ test("native resolve reports undefined (not a throw) when nothing is configured"
   assert.equal(hasRuntimePolzaApiKey(), false);
 });
 
+test("native resolution clears an earlier runtime key when credentials are removed", async () => {
+  setRuntimePolzaApiKey("earlier-synthetic-key");
+  const result = await polzaApiKeyAuth.resolve({ ctx: emptyCtx, signal: new AbortController().signal });
+  assert.equal(result, undefined);
+  assert.equal(hasRuntimePolzaApiKey(), false);
+});
+
 test("a runtime-installed key is redacted from text and JSON", () => {
   setRuntimePolzaApiKey("super-secret-value");
   assert.equal(redactText("Bearer super-secret-value failed"), "Bearer <redacted> failed");

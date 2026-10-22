@@ -59,8 +59,8 @@ export const polzaApiKeyAuth: ApiKeyAuth = {
     loadDotEnv(); // dev/CI fallback: fill process.env from .env before consulting it
     const envKey = await ctx.env("POLZA_API_KEY");
     const resolved = resolvePolzaKey({ credentialKey: credential?.key, envKey });
+    setRuntimePolzaApiKey(resolved?.apiKey);
     if (!resolved) return undefined;
-    setRuntimePolzaApiKey(resolved.apiKey);
     return { auth: { apiKey: resolved.apiKey }, source: resolved.source };
   },
 };

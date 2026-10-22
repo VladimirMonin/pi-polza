@@ -1,6 +1,6 @@
 {
   "name": "pi-polza",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": false,
   "type": "module",
   "description": "Polza AI as a native dynamic model provider for Pi Agent: auto-loaded catalog, capabilities, OpenRouter enrichment and actual RUB billing.",
@@ -38,11 +38,15 @@
     ]
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": "*",
-    "@earendil-works/pi-coding-agent": "*"
+    "@earendil-works/pi-ai": ">=1.0.2 <2.0.0",
+    "@earendil-works/pi-coding-agent": ">=1.0.2 <2.0.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "1.4.0",
+    "@earendil-works/pi-coding-agent": "1.4.0"
   },
   "engines": {
-    "node": ">=22.6"
+    "node": ">=22.19.0"
   },
   "scripts": {
     "probe:catalog": "node scripts/probe-catalog.ts",
@@ -53,6 +57,7 @@
     "probe:openrouter": "node scripts/probe-openrouter.ts",
     "probe:enrichment": "node scripts/probe-enrichment.ts",
     "test": "node --test \"tests/**/*.test.ts\"",
+    "test:startup": "node --test tests/startup-native.test.ts",
     "probe:ttft": "node scripts/probe-ttft.ts",
     "probe:persistence": "node scripts/verify-persistence.ts",
     "probe:startup": "node scripts/probe-startup.ts",

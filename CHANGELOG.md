@@ -10,7 +10,22 @@
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-22
+
 ### Изменено
+
+- Установочная и ручная проверка разделены на Git-источник, local checkout, auth/catalog и затронутый UI: без обязательного копирования `.env`, личных путей и фиксированных чисел. RU/EN README синхронизированы; добавлены ссылки на сборку и Project Foundation Kit.
+- Для известного дефекта закреплены воспроизведение и адресная проверка; live-эксперимент нужен при существенной неопределённости внешнего контракта. Описаны существующие диагностические каналы и реальные ограничения хранения без нового logger.
+- Объявлен нижний API-порог Pi 1.0.2 и Node 22.19.0; свежая lifecycle-проверка этого выпуска относится к Pi 1.4.0. Поддержка всех промежуточных версий или моделей не заявляется.
+
+### Исправлено
+
+- Холодный запуск с ключом, сохранённым штатным login Pi: каталог основного `polza` загружается до выбора модели без обязательного `.env`. Сохранённый credential имеет приоритет над окружением.
+- Отсутствие ключа, отклонение авторизации, недоступность каталога и отсутствие пригодных моделей дают различимые безопасные сообщения; произвольный HTTP body и credential не выводятся. Native models-store остаётся владельцем сохранённого каталога.
+
+### Проверки
+
+- Настоящий Pi 1.4.0 lifecycle с synthetic HTTP: cold start, restart, stored-over-env, missing/rejected key, network/cache и отсутствующая модель. Это не новый live-запрос Polza; прежние Pi 1.0.2/1.3.0 результаты ниже сохраняют свои версии.
 
 - Уточнена совместимость **pi-polza 0.2.1 с Pi Agent 1.3.0** на Windows / Node.js 25.8.1:
   на реальном нативном транспорте Pi с синтетическими ответами проверены reasoning,
@@ -129,7 +144,8 @@
 - `npm run audit:secrets` проверяет рабочее дерево, историю Git, workspace и сессии на утечки;
   перед релизом — PASS.
 
-[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/VladimirMonin/pi-polza/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.2.1
 [0.2.0]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.2.0
 [0.1.1]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.1.1
