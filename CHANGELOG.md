@@ -10,6 +10,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-30
+
 ### Добавлено
 
 - В `pi-polza` добавлен выбор уровня рассуждений `xhigh`/`max` там, где это **заявлено каталогом**.
@@ -192,7 +194,8 @@
 - `npm run audit:secrets` проверяет рабочее дерево, историю Git, workspace и сессии на утечки;
   перед релизом — PASS.
 
-[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.3.0
 [0.2.2]: https://github.com/VladimirMonin/pi-polza/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.2.1
 [0.2.0]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.2.0
