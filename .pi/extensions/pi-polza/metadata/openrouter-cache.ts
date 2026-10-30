@@ -6,6 +6,7 @@
  * just because a fresh fetch failed.
  */
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { WORKSPACE_ROOT } from "../env.ts";
 import type { OpenRouterModel } from "./openrouter.ts";
@@ -17,12 +18,18 @@ export const OPENROUTER_CACHE_SCHEMA_VERSION = 1;
 export const OPENROUTER_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Cache lives in the *consumer* project (`.pi/pi-polza-cache`), next to the session it
- * belongs to — not inside the installed package. Running from the source checkout this
- * still resolves to `<repo>/.pi/pi-polza-cache`, because cwd is the repo root there.
+ * The cache is shared: a copy kept in the folder Pi was started from would otherwise be invisible
+ * from every other folder, and the catalog would silently lose the models that only OpenRouter can
+ * describe. Reads therefore take the freshest of the two copies; writes always go to the shared
+ * location so there is one authority instead of one copy per folder.
+ *
+ * - project copy: `<cwd>/.pi/pi-polza-cache/openrouter.json` (legacy, still honoured)
+ * - shared copy:  `<home>/.pi/pi-polza-cache/openrouter.json` (written here)
  */
 export const OPENROUTER_CACHE_DIR = resolve(WORKSPACE_ROOT, ".pi", "pi-polza-cache");
 export const OPENROUTER_CACHE_FILE = resolve(OPENROUTER_CACHE_DIR, "openrouter.json");
+export const SHARED_OPENROUTER_CACHE_DIR = resolve(homedir(), ".pi", "pi-polza-cache");
+export const SHARED_OPENROUTER_CACHE_FILE = resolve(SHARED_OPENROUTER_CACHE_DIR, "openrouter.json");
 
 export interface OpenRouterCacheFile {
   schemaVersion: number;
@@ -44,13 +51,11 @@ export interface CacheIO {
 }
 
 function defaultFile(): string {
-  return OPENROUTER_CACHE_FILE;
+  return SHARED_OPENROUTER_CACHE_FILE;
 }
 
-/** Read the cache. Corrupt or schema-mismatched files are treated as "no cache" (and left intact). */
-export function readOpenRouterCache(options: CacheIO = {}): LoadedOpenRouterCache | null {
-  const file = options.file ?? defaultFile();
-  const now = options.now ?? Date.now();
+/** Read one cache file. Corrupt or schema-mismatched files are treated as "no cache". */
+function readCacheFile(file: string, now: number): LoadedOpenRouterCache | null {
   try {
     if (!existsSync(file)) return null;
     const parsed = JSON.parse(readFileSync(file, "utf8")) as Partial<OpenRouterCacheFile>;
@@ -61,6 +66,21 @@ export function readOpenRouterCache(options: CacheIO = {}): LoadedOpenRouterCach
   } catch {
     return null;
   }
+}
+
+/**
+ * Read the cache: an explicit file, otherwise the freshest of the project copy and the shared copy.
+ * Corrupt or schema-mismatched files are ignored (and left intact).
+ */
+export function readOpenRouterCache(options: CacheIO = {}): LoadedOpenRouterCache | null {
+  const now = options.now ?? Date.now();
+  if (options.file) return readCacheFile(options.file, now);
+
+  const project = readCacheFile(OPENROUTER_CACHE_FILE, now);
+  const shared = readCacheFile(SHARED_OPENROUTER_CACHE_FILE, now);
+  if (!project) return shared;
+  if (!shared) return project;
+  return shared.fetchedAt > project.fetchedAt ? shared : project;
 }
 
 /** Atomically write the cache (temp file + rename). Returns false on any failure. */

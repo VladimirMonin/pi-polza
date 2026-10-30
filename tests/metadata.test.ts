@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { resolveModel, resolveModels } from "../.pi/extensions/pi-polza/metadata/resolver.ts";
+import { toProviderModelConfig } from "../.pi/extensions/pi-polza/mapper.ts";
 import type { PolzaCatalogModel } from "../.pi/extensions/pi-polza/types.ts";
 import type { OpenRouterModel } from "../.pi/extensions/pi-polza/metadata/openrouter.ts";
 import { openRouterModel, polzaModel } from "./fixtures.ts";
@@ -98,7 +99,8 @@ test("Unknown when neither source has a value", () => {
   assert.equal(resolved.capabilities.tools.value, null);
   assert.equal(resolved.piEligibility.eligible, false);
   assert.ok(resolved.piEligibility.reasons.includes("missing_context_window"));
-  assert.ok(resolved.piEligibility.reasons.includes("missing_max_completion_tokens"));
+  // An unknown output limit is no longer a rejection reason: the mapper bounds it by the context.
+  assert.equal(resolved.piEligibility.reasons.includes("missing_max_completion_tokens"), false);
 });
 
 test("Fake chat embedding is rejected", () => {
@@ -135,18 +137,35 @@ test("Override applies to a single field only", () => {
   assert.equal(resolved.limits.maxCompletionTokens.source, "override");
 });
 
-test("Missing modalities produce dedicated reasons, not unsupported_by_pi", () => {
-  const polza = polzaModel({
-    id: "vendor/nomodal",
-    contextLength: 1000,
-    maxCompletionTokens: 100,
-    inputModalities: [],
-    outputModalities: [],
-  });
-  const resolved = resolveModel(polza, null);
-  assert.ok(resolved.piEligibility.reasons.includes("missing_input_modalities"));
-  assert.ok(resolved.piEligibility.reasons.includes("missing_output_modalities"));
-  assert.ok(!resolved.piEligibility.reasons.includes("unsupported_by_pi"));
+test("Unknown modalities do not hide the model, but a known non-text one does", () => {
+  const unknownModalities = resolveModel(
+    polzaModel({
+      id: "vendor/nomodal",
+      contextLength: 1000,
+      maxCompletionTokens: 100,
+      inputModalities: [],
+      outputModalities: [],
+    }),
+    null,
+  );
+  // Unknown is not a confirmed negative: the model is offered, and the mapper falls back to text.
+  assert.equal(unknownModalities.piEligibility.eligible, true);
+  assert.deepEqual(unknownModalities.piEligibility.reasons, []);
+  assert.equal(toProviderModelConfig(unknownModalities)?.input[0], "text");
+
+  // A KNOWN non-text input stays a rejection with its own reason code.
+  const audioOnly = resolveModel(
+    polzaModel({
+      id: "vendor/audio",
+      contextLength: 1000,
+      maxCompletionTokens: 100,
+      inputModalities: ["audio"],
+      outputModalities: ["text"],
+    }),
+    null,
+  );
+  assert.ok(audioOnly.piEligibility.reasons.includes("unsupported_input_modality"));
+  assert.ok(!audioOnly.piEligibility.reasons.includes("unsupported_by_pi"));
 });
 
 test("verified tool support is unknown until a real tool loop confirms it", () => {

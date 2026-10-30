@@ -56,10 +56,12 @@ test("ineligible model maps to null", () => {
   assert.equal(toProviderModelConfig(resolved), null);
 });
 
-test("model without max output after enrichment maps to null (no placeholder)", () => {
+test("model without max output is offered, bounded by its context window", () => {
   const resolved = resolveModel(polzaModel({ id: "sber/gigachat", contextLength: 32000, maxCompletionTokens: null }), null);
-  assert.equal(resolved.limits.maxCompletionTokens.value, null);
-  assert.equal(toProviderModelConfig(resolved), null);
+  assert.equal(resolved.limits.maxCompletionTokens.value, null, "metadata stays unknown");
+  const config = toProviderModelConfig(resolved);
+  assert.equal(config?.maxTokens, 32000, "unknown output limit is bounded by the context window");
+  assert.deepEqual(config?.input, ["text"]);
 });
 
 test("mapInputModalitiesToPi returns null when nothing is mappable", () => {
