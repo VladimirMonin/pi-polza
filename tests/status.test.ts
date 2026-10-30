@@ -51,15 +51,15 @@ test("formatRubCompact adapts precision to magnitude", () => {
   assert.equal(formatRubCompact(0.611), "0.61 ₽");
   assert.equal(formatRubCompact(0.00704003), "0.0070 ₽");
   assert.equal(formatRubCompact(0), "0.00 ₽");
-  assert.equal(formatRubCompact(null), "?");
+  assert.equal(formatRubCompact(null), "? ₽");
 });
 
 test("formatBalanceStatus covers fresh, stale, unavailable and empty session", () => {
   assert.equal(formatBalanceStatus(snap(43.54, "fresh"), { requests: 8, costRub: 0.611 }), "Polza 43.54 ₽ | Spent 0.61 ₽");
   assert.equal(formatBalanceStatus(snap(43.54, "stale"), { requests: 1, costRub: 0.5 }), "Polza 43.54 ₽ stale | Spent 0.50 ₽");
-  assert.equal(formatBalanceStatus(snap(null, "unavailable"), { requests: 1, costRub: 0.5 }), "Polza ? | Spent 0.50 ₽");
-  assert.equal(formatBalanceStatus(snap(null, "unavailable"), { requests: 0, costRub: null }), "Polza ? | Spent 0.00 ₽");
-  assert.equal(formatBalanceStatus(snap(10, "fresh"), { requests: 2, costRub: null }), "Polza 10.00 ₽ | Spent ?");
+  assert.equal(formatBalanceStatus(snap(null, "unavailable"), { requests: 1, costRub: 0.5 }), "Polza ? ₽ | Spent 0.50 ₽");
+  assert.equal(formatBalanceStatus(snap(null, "unavailable"), { requests: 0, costRub: null }), "Polza ? ₽ | Spent 0.00 ₽");
+  assert.equal(formatBalanceStatus(snap(10, "fresh"), { requests: 2, costRub: null }), "Polza 10.00 ₽ | Spent ? ₽");
 });
 
 test("footer labels the amount as Spent, never as the whole session", () => {
@@ -109,7 +109,7 @@ function buildController(opts: { available?: number; fail?: boolean; session?: {
 test("controller renders '?' first, then fresh balance after activation fetch", async () => {
   const h = makeController();
   h.controller.activate();
-  assert.equal(h.last(), "Polza ? | Spent 0.61 ₽");
+  assert.equal(h.last(), "Polza ? ₽ | Spent 0.61 ₽");
   await tick();
   assert.equal(h.last(), "Polza 43.50 ₽ | Spent 0.61 ₽");
   assert.equal(h.controller.snapshot.state, "fresh");
@@ -119,7 +119,7 @@ test("balance failure keeps the session cost and shows unknown balance", async (
   const h = buildController({ fail: true });
   h.controller.activate();
   await tick();
-  assert.equal(h.last(), "Polza ? | Spent 0.61 ₽");
+  assert.equal(h.last(), "Polza ? ₽ | Spent 0.61 ₽");
   assert.equal(h.controller.snapshot.state, "unavailable");
 });
 
@@ -235,7 +235,7 @@ test("renderPolzaStatus uses muted labels, a dim separator, normal values and wa
 
   const failed = recordingTheme();
   renderPolzaStatus(failed.theme, polzaStatusModel(snap(null, "unavailable"), { requests: 0, costRub: null }));
-  assert.ok(failed.calls.some((c) => c.color === "warning" && c.text === "?"));
+  assert.ok(failed.calls.some((c) => c.color === "warning" && c.text === "? ₽"));
 });
 
 test("stale marker uses semantic warning without recoloring the retained balance", () => {
@@ -276,9 +276,8 @@ test("in-flight balance refreshes coalesce; manual bypass and inactive behavior 
   assert.equal(fetches, 2, "inactive completion does not fetch balance");
 });
 
-test("renderPolzaStatus marks a partial subtotal faintly, not as a warning", () => {
+test("renderPolzaStatus marks a partial subtotal as a warning", () => {
   const { theme, calls } = recordingTheme();
   renderPolzaStatus(theme, polzaStatusModel(snap(43.54, "fresh"), { requests: 2, costRub: 0.61, unpricedRequests: 1 }));
-  assert.ok(calls.some((c) => c.color === "dim" && c.text === "partial"));
-  assert.equal(calls.some((c) => c.color === "warning" && c.text === "partial"), false);
+  assert.ok(calls.some((c) => c.color === "warning" && c.text === "partial"));
 });

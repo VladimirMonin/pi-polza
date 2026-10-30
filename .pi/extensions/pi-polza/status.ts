@@ -36,7 +36,7 @@ export interface SessionCost {
 
 /** Compact RUB: 2 decimals for normal amounts, more precision only when the amount is tiny. */
 export function formatRubCompact(value: number | null): string {
-  if (value === null || !Number.isFinite(value)) return "?";
+  if (value === null || !Number.isFinite(value)) return "? ₽";
   const abs = Math.abs(value);
   if (abs === 0) return "0.00 ₽";
   if (abs >= 0.1) return `${value.toFixed(2)} ₽`;
@@ -45,7 +45,6 @@ export function formatRubCompact(value: number | null): string {
 }
 
 function balanceCell(balance: BalanceSnapshot): string {
-  if (balance.value === null) return "?";
   return formatRubCompact(balance.value);
 }
 
@@ -86,7 +85,8 @@ export const PLAIN_STATUS_THEME: StatusTheme = {
 /**
  * Calm, low-noise styling: labels are muted, the separator is dim, values are normal text.
  * Unavailable balance and the stale marker use warning, never the whole line.
- * The `partial` marker is deliberately faint: it qualifies the number without competing with it.
+ * The `partial` marker is a warning too: a subtotal that excludes unmeasured spend must not read as
+ * a final number.
  */
 export function renderPolzaStatus(theme: StatusTheme, model: PolzaStatusModel): string {
   const balanceValue =
@@ -100,7 +100,7 @@ export function renderPolzaStatus(theme: StatusTheme, model: PolzaStatusModel): 
     theme.fg("muted", "Spent"),
     " ",
     theme.fg("text", model.session),
-    ...(model.partial ? [" ", theme.fg("dim", "partial")] : []),
+    ...(model.partial ? [" ", theme.fg("warning", "partial")] : []),
   ].join("");
 }
 

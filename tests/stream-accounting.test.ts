@@ -59,7 +59,7 @@ for (const method of ["stream", "streamSimple"] as const) {
     assert.equal(records.length, 1);
   });
 
-  test(`${method} wiring: pending/rejected completion and uncloneable usage stay unknown`, async () => {
+  test(`${method} wiring: an interrupted response keeps a cost that already arrived`, async () => {
     for (const terminal of ["pending", "rejected", "uncloneable"] as const) {
       const records: PolzaUsageRecord[] = [];
       let received: any;
@@ -73,7 +73,9 @@ for (const method of ["stream", "streamSimple"] as const) {
       if (terminal === "rejected") reject(new Error("synthetic rejected result"));
       else resolve({ stopReason: terminal === "pending" ? "pending" : "stop" });
       await s.result().catch(() => {});
-      assert.deepEqual(records.map((r) => r.costRub), [null]);
+      // A cost that arrived before the interruption is real spend: it must survive. Only a missing
+      // cost_rub becomes unknown, so the uncloneable payload (usage dropped) stays null.
+      assert.deepEqual(records.map((r) => r.costRub), [terminal === "uncloneable" ? null : 9]);
     }
   });
 }

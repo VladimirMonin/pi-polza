@@ -60,15 +60,28 @@ function answerPing(fake: FakePi, reply: unknown): string {
   return requestId;
 }
 
+const PING_EVENTS = {
+  ready: RPC_READY,
+  request: RPC_REQUEST,
+  replyPrefix: RPC_REPLY_PREFIX,
+  asyncComplete: "subagent:async-complete",
+};
+
+/**
+ * The real pi-subagents v1 reply: everything rides inside a versioned envelope, so the advertised
+ * events live under `data`. This fixture mirrors the installed host, not our own assumption — the
+ * bridge used to read a flat body and therefore never activated against a real pi-subagents.
+ */
 const PING_REPLY = {
-  capabilities: { asyncSpawn: true },
-  events: {
-    ready: RPC_READY,
-    request: RPC_REQUEST,
-    replyPrefix: RPC_REPLY_PREFIX,
-    asyncComplete: "subagent:async-complete",
+  version: 1,
+  requestId: "req-1",
+  method: "ping",
+  success: true,
+  data: {
+    capabilities: { asyncSpawn: true },
+    events: PING_EVENTS,
+    session: { id: "root-session" },
   },
-  session: { id: "root-session" },
 };
 
 const COMPLETION = {
@@ -185,5 +198,31 @@ test("a throwing consumer does not break the event bus", () => {
   answerPing(fake, PING_REPLY);
 
   assert.doesNotThrow(() => fake.emit("subagent:async-complete", COMPLETION));
+  bridge.dispose();
+});
+
+test("flat reply body is still accepted (host without the envelope)", () => {
+  const fake = createFakePi();
+  const seen: SubagentChildCompletion[] = [];
+  const bridge = createSubagentsBridge(fake.pi, { onChildCompleted: (child) => seen.push(child) });
+
+  answerPing(fake, { events: PING_EVENTS });
+  assert.equal(bridge.ready, true);
+  assert.equal(bridge.active, true);
+  fake.emit("subagent:async-complete", COMPLETION);
+  assert.equal(seen.length, 2);
+  bridge.dispose();
+});
+
+test("a reply flagged as failed never activates the bridge", () => {
+  const fake = createFakePi();
+  const seen: SubagentChildCompletion[] = [];
+  const bridge = createSubagentsBridge(fake.pi, { onChildCompleted: (child) => seen.push(child) });
+
+  answerPing(fake, { ...PING_REPLY, success: false });
+  assert.equal(bridge.ready, true, "the host did answer");
+  assert.equal(bridge.active, false, "but advertised nothing usable");
+  fake.emit("subagent:async-complete", COMPLETION);
+  assert.equal(seen.length, 0);
   bridge.dispose();
 });

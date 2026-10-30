@@ -214,5 +214,9 @@ export default async function piPolza(pi: ExtensionAPI): Promise<void> {
         : null,
     getUsageRecords: () => accounting.all,
     getStatusController: () => status,
+    // "absent" = pi-subagents never answered the handshake; "inactive" = it answered but advertised
+    // no completion event. Both mean background child spend is not in the totals.
+    getBackgroundImport: () =>
+      subagentsBridge.active ? "active" : subagentsBridge.ready ? "inactive" : "absent",
   });
 }

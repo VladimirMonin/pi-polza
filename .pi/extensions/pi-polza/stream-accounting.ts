@@ -49,11 +49,17 @@ export function createPolzaAccountingStreams(api: ProviderStreams, onRecord: Pol
       },
     });
 
-    const record = (successful: boolean): void => {
+    const record = (successful: boolean, stopReason?: string): void => {
       try {
-        const usage = successful ? lastUsage : { ...lastUsage, cost_rub: null };
-        const value = recordFromUsage(model.id, usage);
-        if (!successful) value.anomalies = [...(value.anomalies ?? []), "request did not complete successfully"];
+        // A cost that already arrived is kept, even for an interrupted response: the request was
+        // billed. Only a genuinely absent cost_rub stays unknown (normalizeUsage keeps it null).
+        const value = recordFromUsage(model.id, lastUsage);
+        if (!successful) {
+          const reason = stopReason
+            ? `request did not complete successfully (${stopReason})`
+            : "request did not complete successfully";
+          value.anomalies = [...(value.anomalies ?? []), reason];
+        }
         // A sink may throw (or return a rejected promise despite its void contract).
         void Promise.resolve(onRecord(value)).catch(() => {});
       } catch {
@@ -63,8 +69,12 @@ export function createPolzaAccountingStreams(api: ProviderStreams, onRecord: Pol
     // Register before exposing the ORIGINAL stream. result() does not consume its event queue;
     // native terminal push resolves it before delivering terminal events to waiting consumers.
     void stream.result().then(
-      (message) => record(message.stopReason === "stop" || message.stopReason === "length" || message.stopReason === "toolUse"),
-      () => record(false),
+      (message) =>
+        record(
+          message.stopReason === "stop" || message.stopReason === "length" || message.stopReason === "toolUse",
+          message.stopReason,
+        ),
+      () => record(false, "rejected"),
     ).catch(() => {});
     return stream;
   };

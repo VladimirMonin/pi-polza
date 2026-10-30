@@ -26,6 +26,34 @@ export interface CommandDeps {
   getUsageRecords: () => readonly PolzaUsageRecord[];
   /** Footer controller, used by `/polza-balance` to force a balance refresh. */
   getStatusController: () => PolzaStatusController;
+  /** Whether background-subagent spend can be imported at all (absent -> "absent"). */
+  getBackgroundImport?: () => "active" | "inactive" | "absent";
+}
+
+/**
+ * One-line-per-fact summary of the last catalog build, so a shorter-than-expected model list is
+ * explainable instead of mysterious: how many Polza offers, how many Pi can use, where the
+ * reference metadata came from, and which models were left out and why.
+ */
+function catalogSummary(deps: CommandDeps): string[] {
+  const info = deps.getLastBuildInfo();
+  if (!info) return [];
+
+  const skipped = deps.getRegistry().filter((entry) => !entry.piEligibility.eligible);
+  const reasons = new Map<string, number>();
+  for (const entry of skipped) {
+    for (const reason of entry.piEligibility.reasons) reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
+  }
+
+  const lines = [
+    `Polza offers: ${info.polzaCount} · Pi can use: ${info.eligible}`,
+    `Reference metadata: ${info.openRouterSource}${info.openRouterError ? ` (error: ${info.openRouterError})` : ""}`,
+  ];
+  if (skipped.length > 0) {
+    const detail = [...reasons.entries()].map(([reason, count]) => `${reason} x${count}`).join(", ");
+    lines.push(`Not offered: ${skipped.length} (${detail})`);
+  }
+  return lines;
 }
 
 /** Render a panel through the active theme (TUI) or as plain text (other modes). */
@@ -88,7 +116,10 @@ export function registerPolzaCommands(pi: ExtensionAPI, deps: CommandDeps): void
   pi.registerCommand("polza-cost", {
     description: "Show actual Polza cost for the current session in native RUB",
     handler: async (_args: string, ctx: ExtensionCommandContext) => {
-      await showPanel(ctx, costPanel(deps.getUsageRecords()));
+      await showPanel(
+        ctx,
+        costPanel(deps.getUsageRecords(), { backgroundImport: deps.getBackgroundImport?.() ?? "absent" }),
+      );
     },
   });
 
@@ -124,6 +155,8 @@ export function registerPolzaCommands(pi: ExtensionAPI, deps: CommandDeps): void
           return;
         }
         ctx.ui.notify(theme.fg("success", "✓ Polza catalog refreshed"), "info");
+        const summary = catalogSummary(deps);
+        if (summary.length > 0) ctx.ui.notify(summary.map((line) => theme.fg("dim", line)).join("\n"), "info");
       } catch (error) {
         ctx.ui.notify(`⚠ Polza refresh failed: ${error instanceof Error ? error.message : String(error)}`, "warning");
       }

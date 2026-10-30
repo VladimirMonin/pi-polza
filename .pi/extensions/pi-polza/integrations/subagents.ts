@@ -31,7 +31,10 @@ export interface SubagentsBridgeOptions {
 }
 
 export interface SubagentsBridge {
+  /** True once a completion event was advertised and subscribed. */
   readonly active: boolean;
+  /** True once pi-subagents answered the handshake at all (installed and reachable). */
+  readonly ready: boolean;
   dispose(): void;
 }
 
@@ -43,10 +46,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-/** Read the advertised completion event name from a ping reply, tolerating unknown extra fields. */
+/**
+ * Read the advertised completion event name from a ping reply, tolerating unknown extra fields.
+ *
+ * pi-subagents answers the v1 RPC inside a versioned envelope:
+ * `{ version, requestId, method, success, data: { events: { asyncComplete } } }`.
+ * The advertised events therefore live under `reply.data`; a flat reply body is still accepted so a
+ * host that answers without the envelope keeps working. A reply flagged `success: false` carries no
+ * contract at all.
+ */
 function advertisedCompletionEvent(reply: unknown): string | undefined {
   if (!isRecord(reply)) return undefined;
-  const events = reply.events;
+  if (reply.success === false) return undefined;
+  const body = isRecord(reply.data) ? reply.data : reply;
+  const events = body.events;
   if (!isRecord(events)) return undefined;
   return nonEmptyString(events.asyncComplete);
 }
@@ -90,6 +103,7 @@ export function createSubagentsBridge(pi: ExtensionAPI, options: SubagentsBridge
   const unsubscribes: Array<() => void> = [];
   let timer: ReturnType<typeof setTimeout> | undefined;
   let completionEvent: string | undefined;
+  let discoveryAnswered = false;
   let disposed = false;
 
   const track = (unsubscribe: () => void): void => {
@@ -120,6 +134,7 @@ export function createSubagentsBridge(pi: ExtensionAPI, options: SubagentsBridge
   const onReply = (reply: unknown): void => {
     clearTimer();
     if (disposed) return;
+    discoveryAnswered = true;
     const event = advertisedCompletionEvent(reply);
     if (!event) return;
     completionEvent = event;
@@ -143,6 +158,9 @@ export function createSubagentsBridge(pi: ExtensionAPI, options: SubagentsBridge
   return {
     get active() {
       return completionEvent !== undefined && !disposed;
+    },
+    get ready() {
+      return discoveryAnswered && !disposed;
     },
     dispose() {
       disposed = true;

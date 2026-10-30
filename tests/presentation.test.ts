@@ -182,13 +182,27 @@ test("costPanel marks coverage partial when a request carried no cost", () => {
   assert.match(text, /partial/);
 });
 
-test("costPanel reports complete coverage when every request is priced", () => {
-  const text = plainText([
+test("costPanel reports complete coverage only when background import is connected", () => {
+  const records = [
     recordFromUsage("qwen/qwen3.5-9b", { prompt_tokens: 10, completion_tokens: 1, cost_rub: 0.01 }, 1),
-  ]);
-  assert.match(text, /1 priced requests; 0 unpriced/);
-  assert.match(text, /complete/);
-  assert.doesNotMatch(text, /partial/);
+  ];
+  const plain = (backgroundImport: "active" | "inactive" | "absent"): string =>
+    renderPanel(
+      { fg: (_c, t) => t, bold: (t) => t },
+      costPanel(records, { backgroundImport }),
+    ).join("\n");
+
+  const active = plain("active");
+  assert.match(active, /1 priced requests; 0 unpriced/);
+  assert.match(active, /complete/);
+  assert.doesNotMatch(active, /partial/);
+
+  // Without the import, the total provably excludes background child spend: never claim complete.
+  for (const state of ["inactive", "absent"] as const) {
+    const text = plain(state);
+    assert.match(text, /background subagents not tracked/);
+    assert.match(text, /Background subagent runs are billed in their own session/);
+  }
 });
 
 test("costPanel states that foreground per-agent attribution is unavailable", () => {
