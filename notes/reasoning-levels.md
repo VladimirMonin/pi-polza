@@ -137,3 +137,15 @@ Key conclusions:
 
 Probe: `npm run probe:reasoning [-- --models=... --max-tokens=... --prompt="..."]`.
 Spend for the whole reasoning investigation: ≈ 0.85 ₽ measured.
+
+## Уровни из каталога (заявленное, а не проверенное)
+
+`metadata/thinking-levels.ts` строит `thinkingLevelMap` из данных каталога Polza, а не из догадки.
+Если у модели опубликован `top_provider.reasoning.supported_efforts` (иногда верхнеуровневый
+`reasoning.supported_efforts`), карта ставит только перечисленные уровни (`off` → `none`), а не
+попавшие в список — `null` (скрыть). `xhigh` заявлен у 44 моделей; у моделей с `reasoning_effort` в
+`supported_parameters`, но без опубликованного списка, уровни передаются под своими именами, а `off`
+скрыт (выключение каталогом не подтверждено). Модели без `reasoning_effort` и без списка поле
+`thinkingLevelMap` не получают. Отдельный живой пробник контроля уровня не выполнялся: карта
+описывает **заявленную** возможность, а не доказанное поведение, поэтому политика `reasoning.ts` и
+метки «not verified» в `/polza-model-info` не меняются.

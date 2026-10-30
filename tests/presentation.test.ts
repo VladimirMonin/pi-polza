@@ -97,6 +97,33 @@ test("modelInfoPanel describes reasoning observation in human terms", () => {
   assert.match(plain(unverified), /Observed reasoning\s+none/);
 });
 
+test("modelInfoPanel lists the catalog levels and marks xhigh as explicit-only", () => {
+  const plain = (m: ReturnType<typeof resolveModel>): string =>
+    renderPanel({ fg: (_c, t) => t, bold: (t) => t }, modelInfoPanel(m)).join("\n");
+
+  // Published allow-list: hidden levels (minimal/max) are omitted, xhigh is offered by the list.
+  const declared = resolveModel(
+    polzaModel({
+      id: "vendor/reasoner",
+      contextLength: 1000,
+      maxCompletionTokens: 100,
+      supportedParameters: ["reasoning", "reasoning_effort"],
+      supportedEfforts: ["none", "low", "medium", "high", "xhigh"],
+    }),
+    null,
+  );
+  const text = plain(declared);
+  assert.match(text, /Catalog levels\s+off, low, medium, high, xhigh/);
+  assert.match(text, /xhigh\/max only via an explicit catalog entry/);
+
+  // No declared effort control: unknown, never a guessed list.
+  const undeclared = resolveModel(
+    polzaModel({ id: "vendor/no-effort", contextLength: 1000, maxCompletionTokens: 100 }),
+    null,
+  );
+  assert.match(plain(undeclared), /Catalog levels\s+unknown/);
+});
+
 test("balancePanel makes the available balance the accent headline", () => {
   const { theme, calls } = recordingTheme();
   renderPanel(

@@ -14,8 +14,13 @@
  *    The safe technical representation is zeros; actual billed cost is `usage.cost_rub` (native
  *    RUB) and catalog RUB prices live in the internal registry / `/polza-model-info`.
  *  - `reasoning` is only true when metadata declares it.
+ *  - `thinkingLevelMap` is written only when the catalog declares either a published effort
+ *    allow-list or the `reasoning_effort` control; see `metadata/thinking-levels.ts`. It describes
+ *    what Polza DECLARES, not verified level control, so it is omitted (never `undefined`) when there
+ *    is nothing to declare.
  */
 import type { ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+import { resolveThinkingLevelMap } from "./metadata/thinking-levels.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
 
 export type PiInputModality = "text" | "image";
@@ -53,6 +58,14 @@ export function toProviderModelConfig(model: ResolvedModel): ProviderModelConfig
   // Unknown modalities -> text only; a known non-text input was already rejected by eligibility.
   const input = mapInputModalitiesToPi(model.modalities.input.value) ?? ["text"];
 
+  // Declared-only mapping: a non-reasoning model or an empty catalog declaration yields no field.
+  const thinkingLevelMap = resolveThinkingLevelMap({
+    reasoning: model.capabilities.reasoning.value === true,
+    controlDeclared:
+      model.raw.polza.top_provider?.supported_parameters?.includes("reasoning_effort") ?? false,
+    supportedEfforts: model.supportedThinkingEfforts,
+  });
+
   return {
     id: model.id,
     name: model.name,
@@ -62,6 +75,7 @@ export function toProviderModelConfig(model: ResolvedModel): ProviderModelConfig
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     contextWindow,
     maxTokens,
+    ...(thinkingLevelMap ? { thinkingLevelMap } : {}),
   };
 }
 

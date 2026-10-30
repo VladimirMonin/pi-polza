@@ -10,6 +10,7 @@ import type { Theme } from "@earendil-works/pi-coding-agent";
 import { summarizeRecords, type PolzaUsageRecord } from "./accounting.ts";
 import { formatRub, type PolzaBalance } from "./balance.ts";
 import { extractInternalCapabilities } from "./mapper.ts";
+import { PI_THINKING_LEVELS, resolveThinkingLevelMap } from "./metadata/thinking-levels.ts";
 import { overridesFor } from "./overrides/models.ts";
 import { describeReasoning, reasoningVerificationFor } from "./reasoning.ts";
 import type { ResolvedModel } from "./metadata/types.ts";
@@ -112,6 +113,29 @@ function rubOrUnknown(value: number | null): string {
   return value === null ? "unknown" : formatRub(value);
 }
 
+/**
+ * The reasoning levels Pi will offer, as declared by the catalog — never a guess. `unknown` when the
+ * catalog declares no effort control at all. `xhigh`/`max` are listed only because of an explicit
+ * catalog entry, so they carry that note.
+ */
+function catalogLevelsRow(model: ResolvedModel): PanelRow {
+  const map = resolveThinkingLevelMap({
+    reasoning: model.capabilities.reasoning.value === true,
+    controlDeclared:
+      model.raw.polza.top_provider?.supported_parameters?.includes("reasoning_effort") ?? false,
+    supportedEfforts: model.supportedThinkingEfforts,
+  });
+  if (!map) return { label: "Catalog levels", value: "unknown", role: "unknown" };
+  const levels = PI_THINKING_LEVELS.filter((level) => map[level] !== null);
+  const extended = levels.some((level) => level === "xhigh" || level === "max");
+  return {
+    label: "Catalog levels",
+    value: levels.length > 0 ? levels.join(", ") : "none",
+    role: "value",
+    hint: extended ? "xhigh/max only via an explicit catalog entry" : undefined,
+  };
+}
+
 /** `/polza-model-info` — grouped, human-readable, facts unchanged. */
 export function modelInfoPanel(model: ResolvedModel): Panel {
   const caps = extractInternalCapabilities(model);
@@ -159,6 +183,7 @@ export function modelInfoPanel(model: ResolvedModel): Panel {
           value: verification.levelControlVerified === true ? "verified" : "not verified",
           role: verification.levelControlVerified === true ? "success" : "unknown",
         },
+        catalogLevelsRow(model),
         {
           label: "Observed reasoning",
           value: reasoningObserved

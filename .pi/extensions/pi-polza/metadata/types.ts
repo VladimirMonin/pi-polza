@@ -78,6 +78,13 @@ export interface ResolvedModel {
     responseFormat: Provenanced<boolean>;
   };
 
+  /**
+   * Polza-published reasoning-effort allow-list (`top_provider.reasoning.supported_efforts`).
+   * Catalog data, deliberately not Provenanced and never enriched from OpenRouter: only Polza
+   * publishes this. `null` means Polza does not publish a list for the model.
+   */
+  supportedThinkingEfforts: string[] | null;
+
   /** Declared by metadata. */
   declaredToolSupport: boolean;
   /** Only becomes true after a real tool loop through Polza. */

@@ -10,6 +10,7 @@
  * OpenRouter is then used to fill the negative/positive where Polza is silent.
  */
 import { toNumber } from "../catalog.ts";
+import { normalizeSupportedEfforts } from "./thinking-levels.ts";
 import type { PolzaCatalogModel } from "../types.ts";
 
 export interface NormalizedPolzaPricing {
@@ -37,6 +38,8 @@ export interface NormalizedPolzaModel {
   supportsIncludeReasoning: boolean | null;
   supportsStructuredOutputs: boolean | null;
   supportsResponseFormat: boolean | null;
+  /** Published reasoning-effort allow-list; `null` when Polza does not publish one. */
+  supportedEfforts: string[] | null;
   pricing: NormalizedPolzaPricing;
   raw: PolzaCatalogModel;
 }
@@ -55,6 +58,14 @@ export function normalizePolzaModel(raw: PolzaCatalogModel): NormalizedPolzaMode
   const cap = (name: string): boolean | null => (params === null ? null : has(name) ? true : null);
 
   const pricing = raw.top_provider?.pricing ?? null;
+
+  // The allow-list lives under `top_provider.reasoning` in the live catalog, with a top-level
+  // `reasoning` fallback on some entries. Unknown/empty stays `null`.
+  const topReasoning = raw.top_provider?.reasoning as { supported_efforts?: unknown } | undefined;
+  const topLevelReasoning = raw.reasoning as { supported_efforts?: unknown } | undefined;
+  const supportedEfforts = normalizeSupportedEfforts(
+    topReasoning?.supported_efforts ?? topLevelReasoning?.supported_efforts,
+  );
 
   return {
     id: raw.id,
@@ -77,6 +88,7 @@ export function normalizePolzaModel(raw: PolzaCatalogModel): NormalizedPolzaMode
     supportsIncludeReasoning: cap("include_reasoning"),
     supportsStructuredOutputs: cap("structured_outputs"),
     supportsResponseFormat: cap("response_format"),
+    supportedEfforts,
     pricing: {
       currency: typeof pricing?.currency === "string" ? pricing.currency : null,
       promptPerMillion: toNumber(pricing?.prompt_per_million) ?? null,

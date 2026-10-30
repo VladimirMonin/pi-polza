@@ -15,6 +15,10 @@ export interface PolzaModelOptions {
   contextLength?: number | null;
   maxCompletionTokens?: number | null;
   supportedParameters?: string[] | null;
+  /** Published allow-list, placed in `top_provider.reasoning.supported_efforts`. */
+  supportedEfforts?: string[] | null;
+  /** Raw `reasoning` block; `supportedEfforts` is merged on top when both are given. */
+  reasoning?: Record<string, unknown> | null;
   promptPerMillion?: string | number | null;
   completionPerMillion?: string | number | null;
   cacheReadPerMillion?: string | number | null;
@@ -23,6 +27,10 @@ export interface PolzaModelOptions {
 }
 
 export function polzaModel(options: PolzaModelOptions): PolzaCatalogModel {
+  const reasoning =
+    options.supportedEfforts !== undefined
+      ? { ...(options.reasoning ?? {}), supported_efforts: options.supportedEfforts }
+      : options.reasoning;
   return {
     id: options.id,
     name: options.name ?? options.id,
@@ -36,6 +44,7 @@ export function polzaModel(options: PolzaModelOptions): PolzaCatalogModel {
       context_length: options.contextLength ?? null,
       max_completion_tokens: options.maxCompletionTokens ?? null,
       supported_parameters: options.supportedParameters === undefined ? [] : options.supportedParameters,
+      ...(reasoning !== undefined ? { reasoning } : {}),
       pricing: {
         prompt_per_million: options.promptPerMillion ?? null,
         completion_per_million: options.completionPerMillion ?? null,

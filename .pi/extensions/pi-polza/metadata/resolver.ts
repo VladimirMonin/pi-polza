@@ -142,6 +142,7 @@ export function resolveModel(
     limits,
     modalities,
     capabilities,
+    supportedThinkingEfforts: polza.supportedEfforts,
     declaredToolSupport: capabilities.tools.value === true,
     verifiedToolSupport:
       options.verifiedToolSupportById?.[polza.id] ?? options.verifiedToolSupport ?? "unknown",
