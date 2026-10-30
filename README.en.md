@@ -34,6 +34,11 @@ models exist, what their limits are, or what a request actually cost. This plugi
 - Streaming responses and tool calling
 - Four slash commands for inspecting models, cost and balance
 
+The reasoning level is picked with Pi's own controls — `/thinking` in a session or `--thinking` at
+startup. `xhigh` and `max` are available only on models where the Polza catalog declares reasoning
+levels (a published allow-list or a declared `reasoning_effort`); for the rest the set stays within
+`off…high`.
+
 ## Installation
 
 Requires [Pi Agent](https://pi.dev) ≥ 1.0.2 (< 2.0.0), Node.js ≥ 22.19.0, and Git for GitHub installation. Other packages in a build may require a newer Node. The provider needs no Python. For ready-made Code/Task profiles use the [build installer](https://github.com/VladimirMonin/pi-agent-build/blob/main/INSTALL_FOR_AGENTS.md), not a local checkout override of its pin.
@@ -194,7 +199,7 @@ unknown and never becomes `0 ₽`.
 
 | Command | Description |
 | --- | --- |
-| `/polza-model-info` | Capabilities, limits, pricing and metadata sources for the current model |
+| `/polza-model-info` | Capabilities, limits, pricing, metadata sources and catalog reasoning levels (`Catalog levels` row) for the current model |
 | `/polza-cost` | Actual Polza cost: main session, foreground and completed background subagents |
 | `/polza-balance` | Polza account balance (native RUB) and footer refresh |
 | `/polza-refresh` | Reload the Polza catalog and OpenRouter enrichment now |
@@ -243,6 +248,9 @@ Because of this, fields can read `unknown` or `not verified`. That means **there
 confirmation**, not that the plugin failed. The plugin never invents capabilities to fill a gap:
 an absent value stays `unknown`, never `0`.
 
+The `Catalog levels` row in `/polza-model-info` lists the levels Pi will offer for the current model
+according to the catalog; it reads `unknown` when the catalog declares no reasoning levels.
+
 <details>
 <summary>Screenshot: metadata detail</summary>
 
@@ -263,8 +271,13 @@ treated strictly as enrichment:
 
 ## Known limitations
 
-- Reasoning *levels* (`minimal`/`low`/`medium`/`high`/…) are not verified for every model family;
-  the panel reports `not verified` where we have no reproducible evidence.
+- Reasoning *levels* come from the catalog, not from guesses: a published allow-list
+  (`top_provider.reasoning.supported_efforts`) exists for 85 of 300 chat models and `xhigh` is
+  declared for 44 of them; `reasoning_effort` is declared for 187 of 300. Levels absent from a
+  published list are hidden, and `xhigh`/`max` appear only where the catalog declares reasoning
+  levels; with no list but a declared `reasoning_effort`, Pi level names pass through unchanged and
+  `off` is hidden. Whether the selected level changes a live request is not verified, so the panel
+  still reports `not verified` where we have no reproducible evidence.
 - Some Polza-exclusive models are omitted when mandatory Pi model limits cannot be determined
   reliably — better absent than wrong.
 - Catalog metadata and the actually billed cost can differ. Billing always follows `usage.cost_rub`.
