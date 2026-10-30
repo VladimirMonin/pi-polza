@@ -68,7 +68,7 @@ pi install https://github.com/VladimirMonin/pi-polza
 Для fixed-source установки подставьте **уже опубликованный** tag или commit:
 
 ```bash
-pi install "https://github.com/VladimirMonin/pi-polza@v0.2.2"
+pi install "https://github.com/VladimirMonin/pi-polza@v0.3.1"
 ```
 
 Проверить установку:
@@ -297,7 +297,7 @@ foreground-подагентов и завершённых background-подаг�
 Для плавающего Git-источника Pi использует `pi update <source>` (проверьте `pi update --help` своей версии). Tag/commit-pinned установка переходит на явно выбранный **опубликованный ref**:
 
 ```bash
-pi install "https://github.com/VladimirMonin/pi-polza@v0.2.2"
+pi install "https://github.com/VladimirMonin/pi-polza@v0.3.1"
 ```
 
 Local `pi install "<REPO_ROOT>"` читает рабочее дерево, не доказывает GitHub-доставку. Не подключайте local и Git копии одновременно. В принятой сборке provider обновляет её installer по manifest, не unpinned bulk update. [Различия источников](instructions/manual-testing.md).

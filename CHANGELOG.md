@@ -10,6 +10,14 @@
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-30
+
+### Исправлено
+
+- Пример установки в README указывал на предыдущий выпуск `v0.2.2`, то есть по документации
+  ставилась версия без новых исправлений каталога и учёта. Пример закреплён на текущий выпуск;
+  код провайдера между 0.3.0 и 0.3.1 не менялся.
+
 ## [0.3.0] - 2026-10-30
 
 ### Добавлено
@@ -194,7 +202,8 @@
 - `npm run audit:secrets` проверяет рабочее дерево, историю Git, workspace и сессии на утечки;
   перед релизом — PASS.
 
-[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/VladimirMonin/pi-polza/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.3.1
 [0.3.0]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.3.0
 [0.2.2]: https://github.com/VladimirMonin/pi-polza/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/VladimirMonin/pi-polza/releases/tag/v0.2.1

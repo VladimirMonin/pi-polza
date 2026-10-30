@@ -67,7 +67,7 @@ pi install https://github.com/VladimirMonin/pi-polza
 For a fixed source, substitute an **already published** tag or commit:
 
 ```bash
-pi install "https://github.com/VladimirMonin/pi-polza@v0.2.2"
+pi install "https://github.com/VladimirMonin/pi-polza@v0.3.1"
 ```
 
 Verify it is installed:
@@ -293,7 +293,7 @@ treated strictly as enrichment:
 For a floating Git source, Pi uses `pi update <source>` (check `pi update --help` for your version). Tag/commit-pinned installs move to an explicitly selected **published ref**:
 
 ```bash
-pi install "https://github.com/VladimirMonin/pi-polza@v0.2.2"
+pi install "https://github.com/VladimirMonin/pi-polza@v0.3.1"
 ```
 
 A local `pi install "<REPO_ROOT>"` reads the working tree; it does not prove GitHub delivery. Do not load local and Git copies together. In an accepted build, its installer updates the provider from the manifest, not an unpinned bulk update. [Source differences (Russian)](instructions/manual-testing.md).
